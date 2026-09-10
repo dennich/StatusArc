@@ -47,7 +47,7 @@ final class StatusIconRenderer {
             return true
         }
 
-        // Keep this false so green/yellow/red battery states are preserved.
+        // Keep this false so battery state colors are preserved.
         image.isTemplate = false
         return image
     }
@@ -86,10 +86,10 @@ final class StatusIconRenderer {
         let activeColor: NSColor
         if battery.isCharging {
             activeColor = .systemGreen
-        } else if fraction <= 0.10 {
-            activeColor = .systemRed
-        } else if fraction < 0.20 {
+        } else if battery.isLowPowerModeEnabled {
             activeColor = .systemYellow
+        } else if battery.hasLowBatteryWarning {
+            activeColor = .systemRed
         } else {
             activeColor = bright
         }
