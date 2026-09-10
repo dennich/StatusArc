@@ -1,0 +1,24 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Build StatusArc
+        run: |
+          xcodebuild \
+            -project StatusArc.xcodeproj \
+            -target StatusArc \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            build

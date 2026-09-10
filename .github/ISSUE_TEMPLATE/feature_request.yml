@@ -1,0 +1,37 @@
+name: Feature request
+description: Propose an improvement to StatusArc
+title: "[Feature] "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: What problem would this solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the smallest useful version of the feature.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: permissions
+    attributes:
+      label: Would this require a new macOS permission?
+      options:
+        - "No"
+        - "Yes"
+        - "Not sure"
+    validations:
+      required: true
+
+  - type: textarea
+    id: visual
+    attributes:
+      label: Menu-bar or icon impact
+      description: Explain any change to the icon, menu, or status semantics.

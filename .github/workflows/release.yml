@@ -1,0 +1,221 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-latest
+
+    env:
+      PRODUCT_NAME: StatusArc
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+
+          if [[ -z "${VERSION}" || "${VERSION}" == "${TAG}" ]]; then
+            echo "Release tags must look like v1.0.0"
+            exit 1
+          fi
+
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Build universal macOS app
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BUILD_ROOT="$RUNNER_TEMP/statusarc-build"
+
+          xcodebuild \
+            -project StatusArc.xcodeproj \
+            -target StatusArc \
+            -configuration Release \
+            -sdk macosx \
+            ARCHS="arm64 x86_64" \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            SYMROOT="$BUILD_ROOT" \
+            build
+
+          APP_PATH="$BUILD_ROOT/Release/StatusArc.app"
+
+          test -d "$APP_PATH"
+          test -x "$APP_PATH/Contents/MacOS/StatusArc"
+
+          echo "APP_PATH=$APP_PATH" >> "$GITHUB_ENV"
+          echo "Built architectures:"
+          lipo -archs "$APP_PATH/Contents/MacOS/StatusArc"
+
+      - name: Sign and notarize when Developer ID secrets are configured
+        id: signing
+        shell: bash
+        env:
+          APPLE_DEVELOPER_ID_P12_BASE64: ${{ secrets.APPLE_DEVELOPER_ID_P12_BASE64 }}
+          APPLE_DEVELOPER_ID_P12_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_P12_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          HAVE_SIGNING=1
+
+          for value in \
+            "$APPLE_DEVELOPER_ID_P12_BASE64" \
+            "$APPLE_DEVELOPER_ID_P12_PASSWORD" \
+            "$APPLE_ID" \
+            "$APPLE_TEAM_ID" \
+            "$APPLE_APP_SPECIFIC_PASSWORD"
+          do
+            if [[ -z "$value" ]]; then
+              HAVE_SIGNING=0
+            fi
+          done
+
+          xattr -cr "$APP_PATH"
+
+          if [[ "$HAVE_SIGNING" == "1" ]]; then
+            echo "Using Developer ID signing and Apple notarization."
+
+            CERT_PATH="$RUNNER_TEMP/developer-id.p12"
+            KEYCHAIN_PATH="$RUNNER_TEMP/statusarc-signing.keychain-db"
+            KEYCHAIN_PASSWORD="$(openssl rand -hex 24)"
+
+            echo "$APPLE_DEVELOPER_ID_P12_BASE64" | base64 --decode > "$CERT_PATH"
+
+            security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+            security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+            security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+            security import "$CERT_PATH" \
+              -k "$KEYCHAIN_PATH" \
+              -P "$APPLE_DEVELOPER_ID_P12_PASSWORD" \
+              -T /usr/bin/codesign \
+              -T /usr/bin/security
+
+            security set-key-partition-list \
+              -S apple-tool:,apple: \
+              -s \
+              -k "$KEYCHAIN_PASSWORD" \
+              "$KEYCHAIN_PATH"
+
+            security list-keychains -d user -s "$KEYCHAIN_PATH"
+
+            IDENTITY="$(
+              security find-identity -v -p codesigning "$KEYCHAIN_PATH" \
+                | awk '/Developer ID Application/ {print $2; exit}'
+            )"
+
+            if [[ -z "$IDENTITY" ]]; then
+              echo "No Developer ID Application identity found in the imported certificate."
+              exit 1
+            fi
+
+            codesign \
+              --force \
+              --options runtime \
+              --timestamp \
+              --sign "$IDENTITY" \
+              "$APP_PATH"
+
+            codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+
+            NOTARY_ZIP="$RUNNER_TEMP/StatusArc-notary.zip"
+            ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$NOTARY_ZIP"
+
+            xcrun notarytool submit "$NOTARY_ZIP" \
+              --apple-id "$APPLE_ID" \
+              --team-id "$APPLE_TEAM_ID" \
+              --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+              --wait
+
+            xcrun stapler staple "$APP_PATH"
+            xcrun stapler validate "$APP_PATH"
+
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Developer ID/notarization secrets are incomplete."
+            echo "::warning::Publishing an ad-hoc signed build. macOS Gatekeeper may require manual approval on first launch."
+
+            codesign --force --sign - "$APP_PATH"
+            codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Package release
+        id: package
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          RELEASE_DIR="$RUNNER_TEMP/statusarc-release"
+          mkdir -p "$RELEASE_DIR"
+
+          ZIP_NAME="StatusArc-${VERSION}.zip"
+          ZIP_PATH="$RELEASE_DIR/$ZIP_NAME"
+          CHECKSUM_PATH="$RELEASE_DIR/$ZIP_NAME.sha256"
+
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$ZIP_PATH"
+
+          shasum -a 256 "$ZIP_PATH" | awk '{print $1}' > "$CHECKSUM_PATH"
+
+          echo "zip_name=$ZIP_NAME" >> "$GITHUB_OUTPUT"
+          echo "zip_path=$ZIP_PATH" >> "$GITHUB_OUTPUT"
+          echo "checksum_path=$CHECKSUM_PATH" >> "$GITHUB_OUTPUT"
+
+          echo "Release SHA-256:"
+          cat "$CHECKSUM_PATH"
+
+      - name: Create GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+          ZIP_PATH: ${{ steps.package.outputs.zip_path }}
+          CHECKSUM_PATH: ${{ steps.package.outputs.checksum_path }}
+          SIGNED: ${{ steps.signing.outputs.signed }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$SIGNED" == "true" ]]; then
+            SECURITY_NOTE="Developer ID signed and notarized."
+          else
+            SECURITY_NOTE="Ad-hoc signed development distribution. macOS may require manual approval on first launch."
+          fi
+
+          NOTES_FILE="$RUNNER_TEMP/release-notes.md"
+
+          cat > "$NOTES_FILE" <<EOF
+          StatusArc ${VERSION}
+
+          ${SECURITY_NOTE}
+
+          Homebrew users can install this release from the project tap after the
+          tap updater has published the matching cask.
+          EOF
+
+          gh release create "$TAG" \
+            "$ZIP_PATH" \
+            "$CHECKSUM_PATH" \
+            --title "StatusArc ${VERSION}" \
+            --notes-file "$NOTES_FILE"

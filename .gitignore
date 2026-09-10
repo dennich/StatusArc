@@ -1,0 +1,37 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Xcode
+build/
+DerivedData/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# Playgrounds
+timeline.xctimeline
+playground.xcworkspace
+
+# User-specific signing / local configuration
+*.mobileprovision
+*.provisionprofile
+
+# Archives and exported apps
+*.xcarchive
+*.dSYM
+*.dSYM.zip
+*.app.zip
+
+# Local environment files
+.env
+.env.*
+!.env.example
