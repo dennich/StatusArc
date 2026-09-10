@@ -132,7 +132,7 @@ echo "Generating signed Sparkle appcast with the private key in your macOS Keych
   --embed-release-notes \
   --maximum-deltas 0 \
   --maximum-versions 1 \
-  --output-path "$APPCAST_DIR/appcast.xml" \
+  -o "$APPCAST_DIR/appcast.xml" \
   "$APPCAST_DIR"
 
 APPCAST_PATH="$APPCAST_DIR/appcast.xml"

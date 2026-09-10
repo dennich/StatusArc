@@ -14,11 +14,11 @@ brew install --cask dennich/tap/statusarc
 ```
 
 After the Sparkle updater ships, StatusArc can update itself from its menu.
-Starting with that Sparkle-enabled release, generated Homebrew casks declare
-`auto_updates true` so Homebrew understands that StatusArc may update itself.
+Homebrew remains a supported update channel too, so the generated cask stays a
+normal versioned cask rather than opting out of `brew upgrade`.
 
-The tap still tracks every published release so new installations receive the
-current version.
+The tap tracks every published release so new installations and Homebrew
+upgrades receive the current version.
 
 ## Release flow
 

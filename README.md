@@ -192,8 +192,8 @@ brew install --cask dennich/tap/statusarc
 > Settings → Privacy & Security** on first launch.
 
 After a Sparkle-enabled release is installed, routine application updates can
-be started directly from the StatusArc menu. Homebrew remains the installation
-and fresh-download channel.
+be started directly from the StatusArc menu. Homebrew remains a supported
+installation and upgrade channel as well.
 
 See [docs/HOMEBREW.md](docs/HOMEBREW.md) for release, signing, notarization,
 update-signing, and tap setup.
