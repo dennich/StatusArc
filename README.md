@@ -21,13 +21,13 @@ battery percentage and the rest is dimmed.
 
 | State | Active arc |
 | --- | --- |
-| Above 20% | normal menu-bar foreground |
+| Normal | normal menu-bar foreground |
 | Charging | green |
-| Below 20% | yellow |
-| 10% or below | red |
+| Low Power Mode | yellow |
+| macOS low-battery warning | red |
 | Uncharged portion | dimmed |
 
-Charging currently takes precedence over low-battery warning colors.
+Charging takes precedence, followed by Low Power Mode, then the macOS low-battery warning state.
 
 ### Input source — center
 
