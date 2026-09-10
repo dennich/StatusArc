@@ -8,6 +8,8 @@ struct BatteryStatus {
     let level: Double
     let isCharging: Bool
     let isFullyCharged: Bool
+    let isLowPowerModeEnabled: Bool
+    let hasLowBatteryWarning: Bool
     let powerSource: String
     let minutesRemaining: Int?
 }
@@ -95,6 +97,11 @@ final class SystemStatusMonitor {
             let level = min(max(rawLevel, 0.0), 1.0)
             let isCharging = description[kIOPSIsChargingKey as String] as? Bool ?? false
             let isFullyCharged = description[kIOPSIsChargedKey as String] as? Bool ?? false
+            let isLowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
+
+            let batteryWarningLevel = IOPSGetBatteryWarningLevel()
+            let hasLowBatteryWarning = batteryWarningLevel == kIOPSLowBatteryWarningEarly
+                || batteryWarningLevel == kIOPSLowBatteryWarningFinal
 
             let powerSourceState = description[kIOPSPowerSourceStateKey as String] as? String
             let powerSource = powerSourceState == kIOPSACPowerValue
@@ -112,6 +119,8 @@ final class SystemStatusMonitor {
                 level: level,
                 isCharging: isCharging,
                 isFullyCharged: isFullyCharged,
+                isLowPowerModeEnabled: isLowPowerModeEnabled,
+                hasLowBatteryWarning: hasLowBatteryWarning,
                 powerSource: powerSource,
                 minutesRemaining: minutesRemaining
             )
