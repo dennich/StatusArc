@@ -8,19 +8,19 @@ The top half-arc represents battery percentage.
 
 - The full track is always visible in a dimmed system color.
 - The active track length equals the current battery percentage.
-- Above 20% and not charging: normal menu-bar foreground.
+- Normal state: normal menu-bar foreground.
 - Charging: system green.
-- Below 20% and above 10%: system yellow.
-- 10% or below: system red.
-- Charging takes precedence over the low/critical warning colors.
+- Low Power Mode: system yellow.
+- macOS low-battery warning: system red.
+- Charging takes precedence, followed by Low Power Mode, then the low-battery warning state.
 
 Examples:
 
 - 100%: 100% active, 0% dim.
 - 80%: 80% active, 20% dim.
 - 80% while charging: 80% green, 20% dim.
-- 19%: 19% yellow, 81% dim.
-- 10%: 10% red, 90% dim.
+- 50% in Low Power Mode: 50% yellow, 50% dim.
+- 15% while macOS reports a low-battery warning: 15% red, 85% dim.
 
 Use semantic macOS colors so appearance remains appropriate across menu-bar
 light/dark states.
