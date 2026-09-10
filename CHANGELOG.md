@@ -2,7 +2,7 @@
 
 All notable user-visible changes to StatusArc are documented here.
 
-## Unreleased
+## [1.0.1] - 2026-09-10
 
 ### Changed
 - Battery arc colors now follow macOS power states: green while charging, yellow in Low Power Mode, red when macOS reports a low-battery warning, and the normal menu-bar foreground otherwise.
