@@ -40,7 +40,7 @@ if [[ "$IS_DRAFT" != "true" ]]; then
 fi
 
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/statusarc-appcast.XXXXXX")"
-cleanup() {{
+cleanup() {
   rm -rf "$TMP"
 }
 trap cleanup EXIT
@@ -64,7 +64,7 @@ test -f "$ZIP_PATH"
 test -f "$CHECKSUM_PATH"
 
 EXPECTED_SHA="$(tr -d '[:space:]' < "$CHECKSUM_PATH")"
-ACTUAL_SHA="$(shasum -a 256 "$ZIP_PATH" | awk '{{print $1}')"
+ACTUAL_SHA="$(shasum -a 256 "$ZIP_PATH" | awk '{print $1}')"
 
 if [[ "$EXPECTED_SHA" != "$ACTUAL_SHA" ]]; then
   echo "Release ZIP checksum mismatch."
