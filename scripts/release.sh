@@ -4,6 +4,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 REPOSITORY="dennich/StatusArc"
+HOMEBREW_REPOSITORY="dennich/homebrew-tap"
+HOMEBREW_WORKFLOW="update-statusarc.yml"
 
 if [[ $# -ne 1 ]]; then
   echo "Usage: $0 patch|minor|major"
@@ -228,6 +230,60 @@ wait_for_workflow "release.yml" "$RELEASE_COMMIT"
 
 ./scripts/publish-appcast.sh "$VERSION"
 
+echo "Triggering Homebrew tap update..."
+
+PREVIOUS_HOMEBREW_RUN_ID="$(
+  gh run list \
+    --repo "$HOMEBREW_REPOSITORY" \
+    --workflow "$HOMEBREW_WORKFLOW" \
+    --limit 1 \
+    --json databaseId \
+    --jq '.[0].databaseId // empty'
+)"
+
+gh workflow run "$HOMEBREW_WORKFLOW" \
+  --repo "$HOMEBREW_REPOSITORY" \
+  --ref main
+
+HOMEBREW_RUN_ID=""
+for _ in $(seq 1 30); do
+  LATEST_HOMEBREW_RUN_ID="$(
+    gh run list \
+      --repo "$HOMEBREW_REPOSITORY" \
+      --workflow "$HOMEBREW_WORKFLOW" \
+      --limit 1 \
+      --json databaseId \
+      --jq '.[0].databaseId // empty'
+  )"
+
+  if [[ -n "$LATEST_HOMEBREW_RUN_ID" && "$LATEST_HOMEBREW_RUN_ID" != "$PREVIOUS_HOMEBREW_RUN_ID" ]]; then
+    HOMEBREW_RUN_ID="$LATEST_HOMEBREW_RUN_ID"
+    break
+  fi
+  sleep 2
+done
+
+if [[ -z "$HOMEBREW_RUN_ID" ]]; then
+  echo "Could not identify the newly dispatched Homebrew workflow run."
+  echo "StatusArc $VERSION is published, but the Homebrew tap still needs updating."
+  exit 1
+fi
+
+gh run watch "$HOMEBREW_RUN_ID" \
+  --repo "$HOMEBREW_REPOSITORY" \
+  --exit-status
+
+CASK_TEXT="$(
+  gh api "repos/${HOMEBREW_REPOSITORY}/contents/Casks/statusarc.rb" \
+    --jq '.content' \
+  | python3 -c 'import base64,sys; print(base64.b64decode(sys.stdin.read()).decode(), end="")'
+)"
+
+if ! grep -Fq "version \"$VERSION\"" <<< "$CASK_TEXT"; then
+  echo "Homebrew workflow finished, but the cask is not at $VERSION."
+  exit 1
+fi
+
 echo
 echo "Release complete."
-echo "The Homebrew tap checks the new published release within about 15 minutes."
+echo "StatusArc $VERSION is published and Homebrew is verified at $VERSION."

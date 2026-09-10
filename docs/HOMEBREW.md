@@ -43,6 +43,8 @@ The release script:
 9. Uses Sparkle's pinned `generate_appcast` tool and the private key in the
    maintainer's macOS Keychain to sign the update archive metadata.
 10. Uploads `appcast.xml` and only then publishes the GitHub release.
+11. Dispatches the `homebrew-tap` updater using the maintainer's existing local
+    GitHub CLI session, waits for it, and verifies the cask version.
 
 The draft-release step is intentional: if appcast signing fails, the incomplete
 release remains unpublished and is invisible to normal users, Sparkle, and the
@@ -91,8 +93,19 @@ release, downloads its versioned ZIP, computes SHA-256, and regenerates:
 Casks/statusarc.rb
 ```
 
-It runs every 15 minutes and can also be started manually. No token or credential
-is shared between the StatusArc and Homebrew repositories.
+It runs only when explicitly dispatched. Normal releases dispatch it
+automatically from `scripts/release.sh` using the maintainer's existing local
+GitHub CLI authentication. No cross-repository PAT, GitHub App key, shared secret,
+or persistent credential is stored in either repository for this handoff.
+
+The tap workflow itself uses its repository-scoped `GITHUB_TOKEN` only to commit
+the regenerated cask back to `homebrew-tap`.
+
+If a published release needs the tap step retried, run:
+
+```bash
+gh workflow run update-statusarc.yml --repo dennich/homebrew-tap --ref main
+```
 
 The cask remains versioned and checksummed even though StatusArc can self-update.
 
