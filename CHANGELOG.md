@@ -4,6 +4,8 @@ All notable user-visible changes to StatusArc are documented here.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-10
+
 ### Added
 - The current StatusArc version is shown in the menu.
 - Sparkle-powered update discovery and user-triggered installation from the menu.
