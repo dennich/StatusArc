@@ -7,6 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let monitor = SystemStatusMonitor()
     private let actions = SystemActions()
     private let renderer = StatusIconRenderer(size: NSSize(width: 30, height: 22))
+    private let updateManager = UpdateManager()
 
     private var timer: Timer?
     private var inputSources: [TISInputSource] = []
@@ -28,9 +29,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let inputSourcesItem = NSMenuItem(title: "Input Sources", action: nil, keyEquivalent: "")
     private let inputSourcesMenu = NSMenu(title: "Input Sources")
 
+    private let versionItem = NSMenuItem(title: "StatusArc", action: nil, keyEquivalent: "")
+    private let checkForUpdatesItem = NSMenuItem(title: "Check for Updates…", action: nil, keyEquivalent: "")
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         configureStatusItem()
         configureMenu()
+
+        updateManager.onUpdateAvailabilityChanged = { [weak self] _ in
+            self?.updateApplicationMenu()
+        }
+        updateManager.start()
+
         refresh()
 
         timer = Timer.scheduledTimer(
@@ -48,6 +58,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         timer?.invalidate()
+        updateManager.stop()
     }
 
     // MARK: - Setup
@@ -67,6 +78,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         batteryPowerItem.isEnabled = false
         networkItem.isEnabled = false
         inputItem.isEnabled = false
+        versionItem.isEnabled = false
 
         // Battery — mirrors the actionable part of Apple's Battery menu.
         menu.addItem(sectionItem("Battery"))
@@ -130,6 +142,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         menu.addItem(.separator())
 
+        updateManager.configure(checkForUpdatesMenuItem: checkForUpdatesItem)
+        updateApplicationMenu()
+        menu.addItem(versionItem)
+        menu.addItem(checkForUpdatesItem)
+
+        menu.addItem(.separator())
+
         let quitItem = actionItem(
             "Quit StatusArc",
             #selector(quit),
@@ -175,6 +194,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func menuWillOpen(_ menu: NSMenu) {
         refresh()
+        updateApplicationMenu()
         rebuildInputSourcesMenu()
         rebuildWiFiDetailsMenu()
         rebuildWiFiNetworksMenu(using: actions.cachedWiFiNetworks())
@@ -276,6 +296,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func updateInputMenu(_ snapshot: StatusSnapshot) {
         inputItem.title = "Input: \(snapshot.languageCode)"
+    }
+
+    private func updateApplicationMenu() {
+        let version = Bundle.main.object(
+            forInfoDictionaryKey: "CFBundleShortVersionString"
+        ) as? String ?? "Unknown"
+
+        versionItem.title = "StatusArc \(version)"
+
+        if let availableVersion = updateManager.availableVersion {
+            checkForUpdatesItem.title = "Update to \(availableVersion)…"
+        } else {
+            checkForUpdatesItem.title = "Check for Updates…"
+        }
     }
 
     private func formattedDuration(_ minutes: Int) -> String {

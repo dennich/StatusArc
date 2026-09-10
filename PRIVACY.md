@@ -5,7 +5,19 @@ StatusArc is designed as a local macOS utility.
 ## Data sent off the Mac
 
 StatusArc does not contain analytics, telemetry, advertising, crash-reporting
-SDKs, or an application backend. The app itself does not transmit usage data.
+SDKs, or an application backend. It does not transmit usage analytics.
+
+### Software update checks
+
+StatusArc uses Sparkle to request a public update feed from GitHub shortly after
+launch and about once every 24 hours while the app is running. Sparkle system
+profiling is explicitly disabled, so StatusArc does not attach hardware, macOS,
+language, or other system-profile fields to the update feed request.
+
+When the user chooses an available update, Sparkle downloads the corresponding
+versioned StatusArc release archive from GitHub and verifies its update signature
+before installation. GitHub receives normal HTTPS request metadata as the host of
+those public files; StatusArc does not operate a separate update server.
 
 Normal macOS system components may of course communicate with Apple or network
 services independently of StatusArc.

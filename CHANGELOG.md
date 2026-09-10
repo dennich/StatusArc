@@ -2,6 +2,15 @@
 
 All notable user-visible changes to StatusArc are documented here.
 
+## [Unreleased]
+
+### Added
+- The current StatusArc version is shown in the menu.
+- Sparkle-powered update discovery and user-triggered installation from the menu.
+
+### Changed
+- StatusArc probes for updates shortly after launch and about once every 24 hours while running, without automatically downloading or installing them.
+
 ## [1.0.1] - 2026-09-10
 
 ### Changed

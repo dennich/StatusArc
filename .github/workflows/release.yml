@@ -28,7 +28,7 @@ jobs:
           TAG="${GITHUB_REF_NAME}"
           VERSION="${TAG#v}"
 
-          if [[ -z "${VERSION}" || "${VERSION}" == "${TAG}" ]]; then
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$ ]]; then
             echo "Release tags must look like v1.0.0"
             exit 1
           fi
@@ -60,8 +60,45 @@ jobs:
           test -x "$APP_PATH/Contents/MacOS/StatusArc"
 
           echo "APP_PATH=$APP_PATH" >> "$GITHUB_ENV"
-          echo "Built architectures:"
-          lipo -archs "$APP_PATH/Contents/MacOS/StatusArc"
+
+      - name: Verify release metadata and architectures
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          BUNDLE_VERSION="$(
+            /usr/libexec/PlistBuddy \
+              -c "Print :CFBundleShortVersionString" \
+              "$APP_PATH/Contents/Info.plist"
+          )"
+
+          BUILD_NUMBER="$(
+            /usr/libexec/PlistBuddy \
+              -c "Print :CFBundleVersion" \
+              "$APP_PATH/Contents/Info.plist"
+          )"
+
+          if [[ "$BUNDLE_VERSION" != "$VERSION" ]]; then
+            echo "Tag version $VERSION does not match app version $BUNDLE_VERSION"
+            exit 1
+          fi
+
+          if [[ ! "$BUILD_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
+            echo "Invalid CFBundleVersion: $BUILD_NUMBER"
+            exit 1
+          fi
+
+          BUILT_ARCHS="$(lipo -archs "$APP_PATH/Contents/MacOS/StatusArc")"
+          echo "Built architectures: $BUILT_ARCHS"
+
+          for required_arch in arm64 x86_64; do
+            if ! grep -qw "$required_arch" <<< "$BUILT_ARCHS"; then
+              echo "Missing required architecture: $required_arch"
+              exit 1
+            fi
+          done
 
       - name: Sign and notarize when Developer ID secrets are configured
         id: signing
@@ -90,6 +127,38 @@ jobs:
           done
 
           xattr -cr "$APP_PATH"
+
+          resign_sparkle_components() {
+            local identity="$1"
+            local framework="$APP_PATH/Contents/Frameworks/Sparkle.framework"
+            local version_dir="$framework/Versions/B"
+
+            if [[ ! -d "$version_dir" ]]; then
+              echo "Expected Sparkle.framework/Versions/B was not embedded."
+              exit 1
+            fi
+
+            local sign_args=(--force --options runtime --sign "$identity")
+
+            if [[ "$identity" != "-" ]]; then
+              sign_args+=(--timestamp)
+            fi
+
+            if [[ -d "$version_dir/XPCServices/Installer.xpc" ]]; then
+              codesign "${sign_args[@]}" "$version_dir/XPCServices/Installer.xpc"
+            fi
+
+            if [[ -d "$version_dir/XPCServices/Downloader.xpc" ]]; then
+              codesign \
+                "${sign_args[@]}" \
+                --preserve-metadata=entitlements \
+                "$version_dir/XPCServices/Downloader.xpc"
+            fi
+
+            codesign "${sign_args[@]}" "$version_dir/Autoupdate"
+            codesign "${sign_args[@]}" "$version_dir/Updater.app"
+            codesign "${sign_args[@]}" "$framework"
+          }
 
           if [[ "$HAVE_SIGNING" == "1" ]]; then
             echo "Using Developer ID signing and Apple notarization."
@@ -127,6 +196,8 @@ jobs:
               exit 1
             fi
 
+            resign_sparkle_components "$IDENTITY"
+
             codesign \
               --force \
               --options runtime \
@@ -151,7 +222,9 @@ jobs:
             echo "signed=true" >> "$GITHUB_OUTPUT"
           else
             echo "::warning::Developer ID/notarization secrets are incomplete."
-            echo "::warning::Publishing an ad-hoc signed build. macOS Gatekeeper may require manual approval on first launch."
+            echo "::warning::Creating an ad-hoc signed build. macOS Gatekeeper may require manual approval on first launch."
+
+            resign_sparkle_components "-"
 
             codesign --force --sign - "$APP_PATH"
             codesign --verify --deep --strict --verbose=2 "$APP_PATH"
@@ -175,27 +248,44 @@ jobs:
           CHECKSUM_PATH="$RELEASE_DIR/$ZIP_NAME.sha256"
 
           ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$ZIP_PATH"
-
           shasum -a 256 "$ZIP_PATH" | awk '{print $1}' > "$CHECKSUM_PATH"
 
-          echo "zip_name=$ZIP_NAME" >> "$GITHUB_OUTPUT"
           echo "zip_path=$ZIP_PATH" >> "$GITHUB_OUTPUT"
           echo "checksum_path=$CHECKSUM_PATH" >> "$GITHUB_OUTPUT"
 
           echo "Release SHA-256:"
           cat "$CHECKSUM_PATH"
 
-      - name: Create GitHub release
+      - name: Prepare release notes
+        id: notes
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.version.outputs.tag }}
           VERSION: ${{ steps.version.outputs.version }}
-          ZIP_PATH: ${{ steps.package.outputs.zip_path }}
-          CHECKSUM_PATH: ${{ steps.package.outputs.checksum_path }}
           SIGNED: ${{ steps.signing.outputs.signed }}
         run: |
           set -euo pipefail
+
+          NOTES_FILE="$RUNNER_TEMP/release-notes.md"
+
+          python3 - "$VERSION" "$NOTES_FILE" <<'PY'
+          from pathlib import Path
+          import re
+          import sys
+
+          version, destination = sys.argv[1:3]
+          text = Path("CHANGELOG.md").read_text()
+
+          pattern = re.compile(
+              rf"^## \[{re.escape(version)}\][^\n]*\n(?P<body>.*?)(?=^## \[|\Z)",
+              re.MULTILINE | re.DOTALL,
+          )
+          match = pattern.search(text)
+
+          if match is None:
+              raise SystemExit(f"CHANGELOG.md has no section for {version}")
+
+          Path(destination).write_text(match.group("body").strip() + "\n")
+          PY
 
           if [[ "$SIGNED" == "true" ]]; then
             SECURITY_NOTE="Developer ID signed and notarized."
@@ -203,19 +293,29 @@ jobs:
             SECURITY_NOTE="Ad-hoc signed development distribution. macOS may require manual approval on first launch."
           fi
 
-          NOTES_FILE="$RUNNER_TEMP/release-notes.md"
+          {
+            printf '\n---\n\n'
+            printf '%s\n' "$SECURITY_NOTE"
+          } >> "$NOTES_FILE"
 
-          cat > "$NOTES_FILE" <<EOF
-          StatusArc ${VERSION}
+          echo "notes_file=$NOTES_FILE" >> "$GITHUB_OUTPUT"
 
-          ${SECURITY_NOTE}
-
-          Homebrew users can install this release from the project tap after the
-          tap updater has published the matching cask.
-          EOF
+      - name: Create draft GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+          ZIP_PATH: ${{ steps.package.outputs.zip_path }}
+          CHECKSUM_PATH: ${{ steps.package.outputs.checksum_path }}
+          NOTES_FILE: ${{ steps.notes.outputs.notes_file }}
+        run: |
+          set -euo pipefail
 
           gh release create "$TAG" \
             "$ZIP_PATH" \
             "$CHECKSUM_PATH" \
+            --draft \
+            --verify-tag \
             --title "StatusArc ${VERSION}" \
             --notes-file "$NOTES_FILE"

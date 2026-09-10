@@ -15,9 +15,9 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.1</string>
+    <string>$(MARKETING_VERSION)</string>
     <key>CFBundleVersion</key>
-    <string>2</string>
+    <string>$(CURRENT_PROJECT_VERSION)</string>
     <key>LSMinimumSystemVersion</key>
     <string>$(MACOSX_DEPLOYMENT_TARGET)</string>
     <key>LSUIElement</key>
@@ -28,6 +28,16 @@
     <string>StatusArc uses Location permission only because macOS requires it to display nearby Wi-Fi network names.</string>
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>StatusArc uses Location permission only because macOS requires it to display nearby Wi-Fi network names.</string>
+    <key>SUFeedURL</key>
+    <string>https://github.com/dennich/StatusArc/releases/latest/download/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>qEISUmkZ6gsCF/KP40sQV2IVucmQ0gBHS8dwSzOtXcM=</string>
+    <key>SUEnableAutomaticChecks</key>
+    <false/>
+    <key>SUAllowsAutomaticUpdates</key>
+    <false/>
+    <key>SUEnableSystemProfiling</key>
+    <false/>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
 </dict>

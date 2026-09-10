@@ -78,6 +78,12 @@ Clicking the StatusArc icon opens a combined controls menu.
 - Open Emoji & Symbols
 - Open Keyboard Settings
 
+**Updates**
+- Show the installed StatusArc version in the menu
+- Passively check for a newer release shortly after launch and about once per day
+- Show `Update to <version>…` when a newer release is available
+- Download, verify, install, and relaunch through Sparkle only after user action
+
 ## Requirements
 
 - macOS 13 or later
@@ -112,6 +118,11 @@ certificate, provisioning profile, or signing secret.
 StatusArc is designed to work locally and does not include analytics,
 telemetry, advertising, or a network service of its own.
 
+For software updates, StatusArc uses Sparkle to fetch a public update feed and
+release archive from GitHub. Sparkle system profiling is explicitly disabled.
+Update downloads and installation only begin after the user chooses the update
+item in the StatusArc menu.
+
 **Location permission:** modern macOS restricts access to nearby Wi-Fi network
 names. StatusArc requests Location access only when you ask it to scan nearby
 Wi-Fi networks. The app does not request or use geographic coordinates.
@@ -140,6 +151,7 @@ See [PRIVACY.md](PRIVACY.md) for more detail.
 StatusArc/
 ├── StatusArc/
 │   ├── AppDelegate.swift
+│   ├── UpdateManager.swift
 │   ├── SystemActions.swift
 │   ├── SystemStatusMonitor.swift
 │   ├── StatusIconRenderer.swift
@@ -157,15 +169,17 @@ StatusArc/
 ```
 
 The implementation uses Apple platform frameworks including AppKit, CoreWLAN,
-CoreLocation, SystemConfiguration, Carbon, and IOKit. The secured-network lock
+CoreLocation, SystemConfiguration, Carbon, and IOKit. Sparkle is the one
+third-party runtime dependency and is pinned to a specific production release.
+The secured-network lock
 glyph is an SF Symbol rendered by macOS; no Apple symbol artwork is bundled in
 this repository.
 
 
 ## Install with Homebrew
 
-The project includes a companion `homebrew-tap` repository template and an
-automated release pipeline.
+The project includes a companion `homebrew-tap` repository and an automated
+release pipeline.
 
 Once the repositories are published, users can install StatusArc with:
 
@@ -173,12 +187,16 @@ Once the repositories are published, users can install StatusArc with:
 brew install --cask dennich/tap/statusarc
 ```
 
-> **Note:** The current v1.0.0 release is ad-hoc signed, not Developer ID
-> signed/notarized. macOS may require manual approval in **System Settings →
-> Privacy & Security** on first launch.
+> **Note:** Until Developer ID signing and notarization are configured, public
+> releases are ad-hoc signed. macOS may require manual approval in **System
+> Settings → Privacy & Security** on first launch.
+
+After a Sparkle-enabled release is installed, routine application updates can
+be started directly from the StatusArc menu. Homebrew remains the installation
+and fresh-download channel.
 
 See [docs/HOMEBREW.md](docs/HOMEBREW.md) for release, signing, notarization,
-and tap setup.
+update-signing, and tap setup.
 
 ## Contributing
 
