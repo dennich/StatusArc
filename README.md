@@ -173,6 +173,10 @@ Once the repositories are published, users can install StatusArc with:
 brew install --cask dennich/tap/statusarc
 ```
 
+> **Note:** The current v1.0.0 release is ad-hoc signed, not Developer ID
+> signed/notarized. macOS may require manual approval in **System Settings →
+> Privacy & Security** on first launch.
+
 See [docs/HOMEBREW.md](docs/HOMEBREW.md) for release, signing, notarization,
 and tap setup.
 
