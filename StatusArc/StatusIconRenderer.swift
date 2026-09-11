@@ -1,14 +1,14 @@
 import AppKit
 
 final class StatusIconRenderer {
-    private let size: NSSize
-
-    init(size: NSSize) {
-        self.size = size
-    }
+    // Preserve the original 30 × 22 composite and reserve 8 points on its right.
+    static let imageSize = NSSize(width: 38, height: 22)
+    static let statusItemWidth: CGFloat = imageSize.width + 2
+    private let compositeRect = NSRect(x: 0, y: 0, width: 30, height: 22)
+    private let accessoryRect = NSRect(x: 30, y: 5, width: 8, height: 12)
 
     func render(snapshot: StatusSnapshot) -> NSImage {
-        let image = NSImage(size: size, flipped: false) { [weak self] rect in
+        let image = NSImage(size: Self.imageSize, flipped: false) { [weak self] _ in
             guard
                 let self,
                 let context = NSGraphicsContext.current?.cgContext
@@ -24,7 +24,7 @@ final class StatusIconRenderer {
 
             self.drawBatteryArc(
                 in: context,
-                rect: rect,
+                rect: self.compositeRect,
                 battery: snapshot.battery,
                 bright: bright,
                 dim: dim
@@ -32,17 +32,19 @@ final class StatusIconRenderer {
 
             self.drawLanguage(
                 snapshot.languageCode,
-                in: rect,
+                in: self.compositeRect,
                 color: bright
             )
 
             self.drawNetworkIndicator(
                 snapshot.network,
                 in: context,
-                rect: rect,
+                rect: self.compositeRect,
                 bright: bright,
                 dim: dim
             )
+
+            self.drawBatteryAccessory(snapshot.battery, foreground: bright)
 
             return true
         }
@@ -63,9 +65,22 @@ final class StatusIconRenderer {
         let radius: CGFloat = 11.1
         let lineWidth: CGFloat = 1.75
 
+        let activeColor: NSColor
+        let remainderColor: NSColor
+        if battery?.isLowBattery == true {
+            activeColor = .systemRed
+            remainderColor = activeColor.withAlphaComponent(0.25)
+        } else if battery?.isLowPowerModeEnabled == true {
+            activeColor = .systemYellow
+            remainderColor = activeColor.withAlphaComponent(0.25)
+        } else {
+            activeColor = bright
+            remainderColor = dim
+        }
+
         // Full dim arc is always visible.
         context.saveGState()
-        context.setStrokeColor(dim.cgColor)
+        context.setStrokeColor(remainderColor.cgColor)
         context.setLineWidth(lineWidth)
         context.setLineCap(.round)
         context.addArc(
@@ -82,17 +97,6 @@ final class StatusIconRenderer {
 
         let fraction = min(max(battery.level, 0.0), 1.0)
         guard fraction > 0 else { return }
-
-        let activeColor: NSColor
-        if battery.isCharging {
-            activeColor = .systemGreen
-        } else if battery.isLowPowerModeEnabled {
-            activeColor = .systemYellow
-        } else if battery.hasLowBatteryWarning {
-            activeColor = .systemRed
-        } else {
-            activeColor = bright
-        }
 
         // The highlighted segment length is the exact battery percentage.
         let startAngle = CGFloat.pi
@@ -111,6 +115,38 @@ final class StatusIconRenderer {
         )
         context.strokePath()
         context.restoreGState()
+    }
+
+    private func drawBatteryAccessory(_ battery: BatteryStatus?, foreground: NSColor) {
+        guard let battery else { return }
+
+        let symbolName: String
+        let color: NSColor
+        if battery.isCharging {
+            symbolName = "bolt.fill"
+            color = foreground
+        } else if battery.isLowBattery {
+            symbolName = "exclamationmark"
+            color = .systemRed
+        } else {
+            return
+        }
+
+        let configuration = NSImage.SymbolConfiguration(pointSize: 10, weight: .regular)
+            .applying(.init(paletteColors: [color]))
+        guard let symbol = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)?
+            .withSymbolConfiguration(configuration) else { return }
+
+        // Fit without stretching; both accessories share the same fixed slot.
+        let scale = min(accessoryRect.width / symbol.size.width, accessoryRect.height / symbol.size.height)
+        let symbolSize = NSSize(width: symbol.size.width * scale, height: symbol.size.height * scale)
+        let symbolRect = NSRect(
+            x: accessoryRect.midX - symbolSize.width / 2,
+            y: accessoryRect.midY - symbolSize.height / 2,
+            width: symbolSize.width,
+            height: symbolSize.height
+        )
+        symbol.draw(in: symbolRect)
     }
 
     private func drawLanguage(

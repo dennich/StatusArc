@@ -4,6 +4,12 @@ All notable user-visible changes to StatusArc are documented here.
 
 ## [Unreleased]
 
+### Changed
+- Battery levels at a displayed 25% or below, or a macOS early/final low-battery warning, now show a red arc with a dim red remainder and a red attention mark when not charging.
+- Low Power Mode uses a yellow arc with a dim yellow remainder unless low-battery urgency takes precedence.
+- Charging uses a small bolt to the right of the composite icon without changing the arc color; it takes precedence over the attention mark.
+- Accessory space is permanently reserved to prevent menu-bar jitter.
+
 ## [1.1.0] - 2026-09-10
 
 ### Added

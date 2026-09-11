@@ -19,15 +19,18 @@ replacing several separate menu-bar items with one.
 The full battery arc is always visible. The active segment is the current
 battery percentage and the rest is dimmed.
 
-| State | Active arc |
-| --- | --- |
-| Normal | normal menu-bar foreground |
-| Charging | green |
-| Low Power Mode | yellow |
-| macOS low-battery warning | red |
-| Uncharged portion | dimmed |
+| State | Active arc | Remainder |
+| --- | --- | --- |
+| Displayed battery ≤25% or macOS early/final low-battery warning | system red | dim red |
+| Low Power Mode, unless battery is low | system yellow | dim yellow |
+| Normal | normal menu-bar foreground | dim neutral |
 
-Charging takes precedence, followed by Low Power Mode, then the macOS low-battery warning state.
+Low-battery urgency takes precedence over Low Power Mode. Charging does not
+change the arc color: a small `bolt.fill` SF Symbol appears immediately to the
+right of the composite icon. When the battery is low and not charging, a red
+`exclamationmark` appears there instead. The accessory slot is always reserved,
+including when empty, so state changes do not move neighboring menu-bar items.
+Language and network indicators retain their normal semantic colors.
 
 ### Input source — center
 

@@ -3,10 +3,10 @@ import Carbon
 import CoreWLAN
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
-    private let statusItem = NSStatusBar.system.statusItem(withLength: 32)
+    private let statusItem = NSStatusBar.system.statusItem(withLength: StatusIconRenderer.statusItemWidth)
     private let monitor = SystemStatusMonitor()
     private let actions = SystemActions()
-    private let renderer = StatusIconRenderer(size: NSSize(width: 30, height: 22))
+    private let renderer = StatusIconRenderer()
     private let updateManager = UpdateManager()
 
     private var timer: Timer?
@@ -225,7 +225,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func updateBatteryMenu(_ snapshot: StatusSnapshot) {
         if let battery = snapshot.battery {
-            let percent = Int((battery.level * 100).rounded())
+            let percent = battery.displayedPercentage
 
             var stateText: String
             if battery.isFullyCharged {

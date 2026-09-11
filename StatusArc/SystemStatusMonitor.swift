@@ -4,14 +4,37 @@ import CoreWLAN
 import IOKit.ps
 import SystemConfiguration
 
+enum BatteryWarningLevel {
+    case none
+    case early
+    case final
+
+    init(systemLevel: IOPSLowBatteryWarningLevel) {
+        switch systemLevel {
+        case kIOPSLowBatteryWarningNone: self = .none
+        case kIOPSLowBatteryWarningEarly: self = .early
+        case kIOPSLowBatteryWarningFinal: self = .final
+        default: self = .none
+        }
+    }
+}
+
 struct BatteryStatus {
     let level: Double
     let isCharging: Bool
     let isFullyCharged: Bool
     let isLowPowerModeEnabled: Bool
-    let hasLowBatteryWarning: Bool
+    let warningLevel: BatteryWarningLevel
     let powerSource: String
     let minutesRemaining: Int?
+
+    var displayedPercentage: Int {
+        Int((level * 100).rounded())
+    }
+
+    var isLowBattery: Bool {
+        displayedPercentage <= 25 || warningLevel != .none
+    }
 }
 
 enum NetworkStatus {
@@ -51,7 +74,7 @@ struct StatusSnapshot {
         let batteryText: String
 
         if let battery {
-            let percent = Int((battery.level * 100).rounded())
+            let percent = battery.displayedPercentage
             batteryText = battery.isCharging
                 ? "Battery \(percent)% • Charging"
                 : "Battery \(percent)%"
@@ -99,9 +122,7 @@ final class SystemStatusMonitor {
             let isFullyCharged = description[kIOPSIsChargedKey as String] as? Bool ?? false
             let isLowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
 
-            let batteryWarningLevel = IOPSGetBatteryWarningLevel()
-            let hasLowBatteryWarning = batteryWarningLevel == kIOPSLowBatteryWarningEarly
-                || batteryWarningLevel == kIOPSLowBatteryWarningFinal
+            let warningLevel = BatteryWarningLevel(systemLevel: IOPSGetBatteryWarningLevel())
 
             let powerSourceState = description[kIOPSPowerSourceStateKey as String] as? String
             let powerSource = powerSourceState == kIOPSACPowerValue
@@ -120,7 +141,7 @@ final class SystemStatusMonitor {
                 isCharging: isCharging,
                 isFullyCharged: isFullyCharged,
                 isLowPowerModeEnabled: isLowPowerModeEnabled,
-                hasLowBatteryWarning: hasLowBatteryWarning,
+                warningLevel: warningLevel,
                 powerSource: powerSource,
                 minutesRemaining: minutesRemaining
             )
