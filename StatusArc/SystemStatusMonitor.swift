@@ -33,7 +33,7 @@ struct BatteryStatus {
     }
 
     var isLowBattery: Bool {
-        displayedPercentage <= 25 || warningLevel != .none
+        warningLevel != .none
     }
 }
 
@@ -201,18 +201,25 @@ final class SystemStatusMonitor {
             return nil
         }
 
-        guard
-            let value = SCDynamicStoreCopyValue(
-                store,
-                "State:/Network/Global/IPv4" as CFString
-            ) as? [String: Any],
-            let interfaceName = value["PrimaryInterface"] as? String,
-            !interfaceName.isEmpty
-        else {
-            return nil
+        let globalNetworkKeys = [
+            "State:/Network/Global/IPv4",
+            "State:/Network/Global/IPv6"
+        ]
+
+        for key in globalNetworkKeys {
+            guard
+                let value = SCDynamicStoreCopyValue(store, key as CFString)
+                    as? [String: Any],
+                let interfaceName = value["PrimaryInterface"] as? String,
+                !interfaceName.isEmpty
+            else {
+                continue
+            }
+
+            return interfaceName
         }
 
-        return interfaceName
+        return nil
     }
 
     private func isEthernetLike(_ interfaceName: String) -> Bool {

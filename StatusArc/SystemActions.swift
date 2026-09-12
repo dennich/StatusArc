@@ -148,13 +148,27 @@ final class SystemActions: NSObject, CLLocationManagerDelegate {
 
     func connect(
         to network: CWNetwork,
-        password: String?
-    ) throws {
+        password: String?,
+        completion: @escaping (Error?) -> Void
+    ) {
         guard let interface = wifiInterface else {
-            throw StatusArcActionError.message("No Wi-Fi interface was found.")
+            completion(StatusArcActionError.message("No Wi-Fi interface was found."))
+            return
         }
 
-        try interface.associate(to: network, password: password)
+        DispatchQueue.global(qos: .userInitiated).async {
+            let result: Error?
+            do {
+                try interface.associate(to: network, password: password)
+                result = nil
+            } catch {
+                result = error
+            }
+
+            DispatchQueue.main.async {
+                completion(result)
+            }
+        }
     }
 
     func savedPassword(for network: CWNetwork) -> String? {

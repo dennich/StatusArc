@@ -7,7 +7,8 @@ The menu-bar icon has three information zones.
 The top half-arc represents battery percentage.
 
 - The active track length equals the exact current battery percentage.
-- Low battery means a displayed, rounded integer percentage of 25% or below, or an early/final warning from `IOPSGetBatteryWarningLevel()`.
+- Low battery means an early/final warning from `IOPSGetBatteryWarningLevel()`.
+- No custom battery percentage threshold is applied.
 - Low battery: system red active track and dim red remainder.
 - Otherwise, Low Power Mode: system yellow active track and dim yellow remainder.
 - Otherwise: normal menu-bar foreground and dim neutral remainder.
@@ -17,10 +18,12 @@ The top half-arc represents battery percentage.
 A small accessory sits immediately to the right of the composite icon:
 
 - Charging: `bolt.fill` in normal semantic foreground.
-- Otherwise, low battery: `exclamationmark` in system red.
 - Otherwise: empty.
 
-The bolt takes precedence over the attention mark. Accessories do not animate.
+Low-battery warnings affect only the arc; no warning dot is drawn. Bolt changes use a
+180 ms ease-in-out transition: the composite shifts to its new center while
+the old accessory fades out and the new one fades in. Reduce Motion disables
+the transition. Unchanged states do not animate, and accessories never pulse.
 Use semantic macOS colors and reduced alpha for dim colors. Language and
 network indicators retain their normal semantic foreground independently of
 battery state. Keep the rendered image non-template to preserve these colors.
@@ -58,11 +61,17 @@ Other active non-Wi-Fi primary interfaces currently use the same solid line.
 
 ## Layout intent
 
-Use one fixed 40-point status item with a 38 × 22-point image. Preserve the
-original 30 × 22-point composite region at the left. Permanently reserve the
-rightmost 8 points for the accessory, even when empty. Center each symbol in
-an 8 × 12-point box at (30, 5), preserving its aspect ratio.
+Use one dynamically sized status item and a 22-point-high image. Preserve the
+original 30 × 22-point composite geometry, 11.1-point arc radius, and existing
+internal spacing. Trim the original transparent left inset and unused outer padding:
 
-The battery, language, and network geometry stays fixed. Changes between no
-accessory, attention mark, and bolt must not resize the status item or move
-neighboring menu-bar items.
+- No accessory: 24-point image and item width.
+- Charging bolt: 34-point image and item width. Fit the symbol within its
+  original 8 × 12-point bounds without stretching; preserve its gap to the arc.
+
+The image and native item widths change together during the 180 ms transition.
+The accessory fades at the expanding or contracting edge. Icon artwork is never
+scaled; the status button uses no image scaling. Accessories remain vertically
+centered, and the arc, language, and network keep their relative geometry.
+Neighboring menu-bar items move when the item expands or contracts. Reduce Motion
+applies the final image and width immediately.

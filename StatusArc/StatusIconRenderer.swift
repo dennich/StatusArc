@@ -1,14 +1,41 @@
 import AppKit
 
 final class StatusIconRenderer {
-    // Preserve the original 30 × 22 composite and reserve 8 points on its right.
-    static let imageSize = NSSize(width: 38, height: 22)
-    static let statusItemWidth: CGFloat = imageSize.width + 2
-    private let compositeRect = NSRect(x: 0, y: 0, width: 30, height: 22)
-    private let accessoryRect = NSRect(x: 30, y: 5, width: 8, height: 12)
+    // Trim only transparent outer margins; the artwork keeps its original geometry.
+    static let baseItemWidth: CGFloat = 24
+    private static let imageHeight: CGFloat = 22
 
-    func render(snapshot: StatusSnapshot) -> NSImage {
-        let image = NSImage(size: Self.imageSize, flipped: false) { [weak self] _ in
+    enum AccessoryState {
+        case none, bolt
+    }
+
+    static func accessoryState(for battery: BatteryStatus?) -> AccessoryState {
+        guard let battery else { return .none }
+        if battery.isCharging { return .bolt }
+        return .none
+    }
+
+    func render(
+        snapshot: StatusSnapshot,
+        from previousSnapshot: StatusSnapshot? = nil,
+        progress: CGFloat = 1
+    ) -> NSImage {
+        let bright = NSColor.labelColor
+        let accessory = batteryAccessory(snapshot.battery, foreground: bright)
+        let previousAccessory = batteryAccessory(
+            (previousSnapshot ?? snapshot).battery, foreground: bright
+        )
+        let progress = min(max(progress, 0), 1)
+        let oldWidth = previousAccessory?.size.width ?? 0
+        let newWidth = accessory?.size.width ?? 0
+        let accessoryWidth = oldWidth + (newWidth - oldWidth) * progress
+        let oldExtent: CGFloat = previousAccessory == nil ? 0 : 10
+        let newExtent: CGFloat = accessory == nil ? 0 : 10
+        let imageSize = NSSize(
+            width: Self.baseItemWidth + oldExtent + (newExtent - oldExtent) * progress,
+            height: Self.imageHeight
+        )
+        let image = NSImage(size: imageSize, flipped: false) { [weak self] _ in
             guard
                 let self,
                 let context = NSGraphicsContext.current?.cgContext
@@ -21,10 +48,16 @@ final class StatusIconRenderer {
 
             let bright = NSColor.labelColor
             let dim = NSColor.tertiaryLabelColor.withAlphaComponent(0.55)
+            // The original arc has 3 points of transparent inset on its left.
+            // Remove that inset without changing its radius or the bolt gap.
+            let compositeRect = NSRect(
+                x: -3,
+                y: 0, width: 30, height: imageSize.height
+            )
 
             self.drawBatteryArc(
                 in: context,
-                rect: self.compositeRect,
+                rect: compositeRect,
                 battery: snapshot.battery,
                 bright: bright,
                 dim: dim
@@ -32,19 +65,37 @@ final class StatusIconRenderer {
 
             self.drawLanguage(
                 snapshot.languageCode,
-                in: self.compositeRect,
+                in: compositeRect,
                 color: bright
             )
 
             self.drawNetworkIndicator(
                 snapshot.network,
                 in: context,
-                rect: self.compositeRect,
+                rect: compositeRect,
                 bright: bright,
                 dim: dim
             )
 
-            self.drawBatteryAccessory(snapshot.battery, foreground: bright)
+            let accessoryCenterX = compositeRect.maxX + accessoryWidth / 2
+            func drawAccessory(_ image: NSImage?, opacity: CGFloat) {
+                guard let image, opacity > 0 else { return }
+                image.draw(
+                    in: NSRect(
+                        x: accessoryCenterX - image.size.width / 2,
+                        y: (imageSize.height - image.size.height) / 2,
+                        width: image.size.width, height: image.size.height
+                    ),
+                    from: .zero, operation: .sourceOver, fraction: opacity
+                )
+            }
+            if Self.accessoryState(for: (previousSnapshot ?? snapshot).battery)
+                == Self.accessoryState(for: snapshot.battery) {
+                drawAccessory(accessory, opacity: 1)
+            } else {
+                drawAccessory(previousAccessory, opacity: 1 - progress)
+                drawAccessory(accessory, opacity: progress)
+            }
 
             return true
         }
@@ -117,36 +168,20 @@ final class StatusIconRenderer {
         context.restoreGState()
     }
 
-    private func drawBatteryAccessory(_ battery: BatteryStatus?, foreground: NSColor) {
-        guard let battery else { return }
+    private func batteryAccessory(_ battery: BatteryStatus?, foreground: NSColor) -> NSImage? {
+        guard let battery else { return nil }
 
-        let symbolName: String
-        let color: NSColor
-        if battery.isCharging {
-            symbolName = "bolt.fill"
-            color = foreground
-        } else if battery.isLowBattery {
-            symbolName = "exclamationmark"
-            color = .systemRed
-        } else {
-            return
-        }
+        guard battery.isCharging else { return nil }
 
         let configuration = NSImage.SymbolConfiguration(pointSize: 10, weight: .regular)
-            .applying(.init(paletteColors: [color]))
-        guard let symbol = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)?
-            .withSymbolConfiguration(configuration) else { return }
+            .applying(.init(paletteColors: [foreground]))
+        guard let symbol = NSImage(systemSymbolName: "bolt.fill", accessibilityDescription: nil)?
+            .withSymbolConfiguration(configuration) else { return nil }
 
-        // Fit without stretching; both accessories share the same fixed slot.
-        let scale = min(accessoryRect.width / symbol.size.width, accessoryRect.height / symbol.size.height)
-        let symbolSize = NSSize(width: symbol.size.width * scale, height: symbol.size.height * scale)
-        let symbolRect = NSRect(
-            x: accessoryRect.midX - symbolSize.width / 2,
-            y: accessoryRect.midY - symbolSize.height / 2,
-            width: symbolSize.width,
-            height: symbolSize.height
-        )
-        symbol.draw(in: symbolRect)
+        // Fit the bolt without stretching; layout uses its actual width.
+        let scale = min(8 / symbol.size.width, 12 / symbol.size.height)
+        symbol.size = NSSize(width: symbol.size.width * scale, height: symbol.size.height * scale)
+        return symbol
     }
 
     private func drawLanguage(
@@ -169,7 +204,7 @@ final class StatusIconRenderer {
         ]
 
         let textRect = NSRect(
-            x: 4,
+            x: rect.minX + 4,
             y: 6.1,
             width: rect.width - 8,
             height: 10

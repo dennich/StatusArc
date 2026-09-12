@@ -3,13 +3,15 @@ import Carbon
 import CoreWLAN
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
-    private let statusItem = NSStatusBar.system.statusItem(withLength: StatusIconRenderer.statusItemWidth)
+    private let statusItem = NSStatusBar.system.statusItem(withLength: StatusIconRenderer.baseItemWidth)
     private let monitor = SystemStatusMonitor()
     private let actions = SystemActions()
     private let renderer = StatusIconRenderer()
     private let updateManager = UpdateManager()
 
     private var timer: Timer?
+    private var lastIconSnapshot: StatusSnapshot?
+    private var iconAnimation: StatusIconAnimation?
     private var inputSources: [TISInputSource] = []
     private var scannedNetworks: [CWNetwork] = []
     private var isScanningNetworks = false
@@ -58,6 +60,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         timer?.invalidate()
+        iconAnimation?.stop()
         updateManager.stop()
     }
 
@@ -66,6 +69,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func configureStatusItem() {
         if let button = statusItem.button {
             button.imagePosition = .imageOnly
+            button.imageScaling = .scaleNone
             button.toolTip = "StatusArc"
         }
     }
@@ -215,12 +219,51 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func refresh() {
         let snapshot = monitor.snapshot()
 
-        statusItem.button?.image = renderer.render(snapshot: snapshot)
+        updateStatusIcon(snapshot)
         statusItem.button?.toolTip = snapshot.tooltip
 
         updateBatteryMenu(snapshot)
         updateNetworkMenu(snapshot)
         updateInputMenu(snapshot)
+    }
+
+    private func updateStatusIcon(_ snapshot: StatusSnapshot) {
+        let previous = lastIconSnapshot
+        lastIconSnapshot = snapshot
+        let accessoryChanged = previous.map {
+            StatusIconRenderer.accessoryState(for: $0.battery)
+                != StatusIconRenderer.accessoryState(for: snapshot.battery)
+        } ?? false
+        let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+
+        if !accessoryChanged, iconAnimation?.isAnimating == true, !reduceMotion {
+            return
+        }
+        iconAnimation?.stop()
+        iconAnimation = nil
+
+        guard let previous, accessoryChanged, !reduceMotion else {
+            applyStatusIcon(renderer.render(snapshot: snapshot))
+            return
+        }
+
+        let animation = StatusIconAnimation(duration: 0.18, animationCurve: .easeInOut)
+        animation.animationBlockingMode = .nonblocking
+        animation.frameRate = 60
+        animation.onFrame = { [weak self] progress in
+            guard let self else { return }
+            self.applyStatusIcon(self.renderer.render(
+                snapshot: snapshot, from: previous, progress: progress
+            ))
+        }
+        iconAnimation = animation
+        animation.start()
+    }
+
+    private func applyStatusIcon(_ image: NSImage) {
+        // Resize the native item with the rendered frame, never scale its artwork.
+        statusItem.length = image.size.width
+        statusItem.button?.image = image
     }
 
     private func updateBatteryMenu(_ snapshot: StatusSnapshot) {
@@ -538,11 +581,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
         }
 
-        do {
-            try actions.connect(to: network, password: password)
-            refresh()
-        } catch {
-            showError(error, title: "Couldn’t Join Wi-Fi Network")
+        actions.connect(to: network, password: password) { [weak self] error in
+            guard let self else { return }
+
+            if let error {
+                self.showError(error, title: "Couldn’t Join Wi-Fi Network")
+            } else {
+                self.refresh()
+            }
         }
     }
 
@@ -609,15 +655,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
                     var password = suppliedPassword
                     if !self.actions.isOpenNetwork(network), password == nil {
-                        password = self.actions.savedPassword(for: network)
-                            ?? self.askForPassword(networkName: name)
+                        guard let resolvedPassword = self.actions.savedPassword(for: network)
+                            ?? self.askForPassword(networkName: name) else {
+                            return
+                        }
+                        password = resolvedPassword
                     }
 
-                    do {
-                        try self.actions.connect(to: network, password: password)
-                        self.refresh()
-                    } catch {
-                        self.showError(error, title: "Couldn’t Join Wi-Fi Network")
+                    self.actions.connect(to: network, password: password) { [weak self] error in
+                        guard let self else { return }
+
+                        if let error {
+                            self.showError(error, title: "Couldn’t Join Wi-Fi Network")
+                        } else {
+                            self.refresh()
+                        }
                     }
 
                 case .failure(let error):
@@ -811,4 +863,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func quit() {
         NSApp.terminate(nil)
     }
+}
+
+// AppKit schedules frames only during a short accessory transition.
+private final class StatusIconAnimation: NSAnimation {
+    var onFrame: ((CGFloat) -> Void)?
+
+    override var currentProgress: NSAnimation.Progress {
+        get { super.currentProgress }
+        set {
+            super.currentProgress = newValue
+            onFrame?(CGFloat(currentValue))
+        }
+    }
+
+    override var runLoopModesForAnimating: [RunLoop.Mode]? { [.common] }
 }
