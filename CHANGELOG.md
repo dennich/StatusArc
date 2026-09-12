@@ -4,6 +4,8 @@ All notable user-visible changes to StatusArc are documented here.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-12
+
 ### Changed
 - macOS early/final low-battery warnings now show a red arc with a dim red remainder without a separate warning dot; no custom percentage threshold is applied.
 - Low Power Mode uses a yellow arc with a dim yellow remainder unless low-battery urgency takes precedence.
