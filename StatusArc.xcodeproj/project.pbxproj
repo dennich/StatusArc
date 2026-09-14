@@ -26,6 +26,7 @@
 		A10000000000000000000017 /* StatusControlCenterModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000018 /* StatusControlCenterModel.swift */; };
 		A10000000000000000000018 /* StatusControlCenterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000019 /* StatusControlCenterView.swift */; };
 		A10000000000000000000019 /* StatusPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000020 /* StatusPanelController.swift */; };
+		A10000000000000000000020 /* StatusMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000021 /* StatusMotion.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -49,6 +50,7 @@
 		A20000000000000000000018 /* StatusControlCenterModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusControlCenterModel.swift; sourceTree = "<group>"; };
 		A20000000000000000000019 /* StatusControlCenterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusControlCenterView.swift; sourceTree = "<group>"; };
 		A20000000000000000000020 /* StatusPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusPanelController.swift; sourceTree = "<group>"; };
+		A20000000000000000000021 /* StatusMotion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusMotion.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -87,6 +89,7 @@
 				A20000000000000000000018 /* StatusControlCenterModel.swift */,
 				A20000000000000000000019 /* StatusControlCenterView.swift */,
 				A20000000000000000000020 /* StatusPanelController.swift */,
+				A20000000000000000000021 /* StatusMotion.swift */,
 				A20000000000000000000014 /* UpdateManager.swift */,
 				A20000000000000000000003 /* SystemStatusMonitor.swift */,
 				A20000000000000000000015 /* InputSourceIdentity.swift */,
@@ -205,6 +208,7 @@
 				A10000000000000000000017 /* StatusControlCenterModel.swift in Sources */,
 				A10000000000000000000018 /* StatusControlCenterView.swift in Sources */,
 				A10000000000000000000019 /* StatusPanelController.swift in Sources */,
+				A10000000000000000000020 /* StatusMotion.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

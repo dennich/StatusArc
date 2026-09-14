@@ -14,6 +14,7 @@ final class StatusPanelController: NSObject {
     private var cancellable: AnyCancellable?
     private var localMonitor: Any?
     private var globalMonitor: Any?
+    private var pendingResize: DispatchWorkItem?
 
     var onWillShow: (() -> Void)?
 
@@ -40,7 +41,7 @@ final class StatusPanelController: NSObject {
         cancellable = model.$expandedIsland
             .removeDuplicates()
             .sink { [weak self] _ in
-                DispatchQueue.main.async { self?.resizeForContent() }
+                self?.resizeForContent()
             }
     }
 
@@ -92,21 +93,32 @@ final class StatusPanelController: NSObject {
     }
 
     private func resizeForContent(animated: Bool = true) {
+        pendingResize?.cancel()
         guard panel.isVisible || !animated else { return }
+
+        let targetHeight = model.panelHeight
+        if animated, targetHeight < panel.frame.height {
+            let work = DispatchWorkItem { [weak self] in
+                guard let self, self.model.panelHeight == targetHeight else { return }
+                self.setPanelHeight(targetHeight)
+            }
+            pendingResize = work
+            DispatchQueue.main.asyncAfter(
+                deadline: .now() + StatusMotion.expansionDuration,
+                execute: work
+            )
+            return
+        }
+
+        setPanelHeight(targetHeight)
+    }
+
+    private func setPanelHeight(_ height: CGFloat) {
         var frame = panel.frame
         let top = frame.maxY
-        frame.size = NSSize(width: 360, height: model.panelHeight)
+        frame.size = NSSize(width: 360, height: height)
         frame.origin.y = top - frame.height
-
-        if animated && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = 0.24
-                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-                panel.animator().setFrame(frame, display: true)
-            }
-        } else {
-            panel.setFrame(frame, display: true)
-        }
+        panel.setFrame(frame, display: true)
     }
 
     private func positionPanel() {
@@ -149,6 +161,7 @@ final class StatusPanelController: NSObject {
     }
 
     deinit {
+        pendingResize?.cancel()
         if let localMonitor { NSEvent.removeMonitor(localMonitor) }
         if let globalMonitor { NSEvent.removeMonitor(globalMonitor) }
     }

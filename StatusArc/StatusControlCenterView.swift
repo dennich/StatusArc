@@ -17,7 +17,6 @@ struct StatusControlCenterView: View {
         }
         .padding(12)
         .frame(width: 360, alignment: .top)
-        .animation(reduceMotion ? nil : .spring(response: 0.34, dampingFraction: 0.86), value: model.expandedIsland)
     }
 
     private var islandStack: some View {
@@ -46,10 +45,6 @@ struct StatusControlCenterView: View {
             .padding(model.expandedIsland == kind ? 18 : 14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(shape)
-            .onTapGesture {
-                model.toggle(kind, reduceMotion: reduceMotion)
-            }
-            .accessibilityAddTraits(.isButton)
 
         if #available(macOS 26.0, *) {
             base
@@ -71,7 +66,8 @@ struct StatusControlCenterView: View {
                 title: "Battery",
                 subtitle: model.batteryState,
                 trailing: model.batteryPercentage.map { "\($0)%" } ?? "—",
-                expanded: model.expandedIsland == .battery
+                expanded: model.expandedIsland == .battery,
+                action: { toggleIsland(.battery) }
             )
 
             if model.expandedIsland == .battery {
@@ -85,17 +81,20 @@ struct StatusControlCenterView: View {
                     EnergyModeRow(
                         title: "Automatic",
                         symbol: "battery.100",
-                        selected: model.lowPowerModeEnabled == false
+                        selected: model.lowPowerModeEnabled == false,
+                        action: { model.openBatterySettings?() }
                     )
                     EnergyModeRow(
                         title: "Low Power",
                         symbol: "battery.25",
-                        selected: model.lowPowerModeEnabled == true
+                        selected: model.lowPowerModeEnabled == true,
+                        action: { model.openBatterySettings?() }
                     )
                     EnergyModeRow(
                         title: "High Power",
                         symbol: "battery.100.bolt",
-                        selected: false
+                        selected: false,
+                        action: { model.openBatterySettings?() }
                     )
                 }
 
@@ -121,7 +120,8 @@ struct StatusControlCenterView: View {
                     get: { model.wifiOn },
                     set: { model.setWiFiPower?($0) }
                 ),
-                toggleDisabled: model.wifiBusy
+                toggleDisabled: model.wifiBusy,
+                action: { toggleIsland(.connectivity) }
             )
 
             if model.expandedIsland == .connectivity {
@@ -183,7 +183,8 @@ struct StatusControlCenterView: View {
                 title: "Input Source",
                 subtitle: model.inputSourceName,
                 badge: model.inputSourceLabel,
-                expanded: model.expandedIsland == .inputSource
+                expanded: model.expandedIsland == .inputSource,
+                action: { toggleIsland(.inputSource) }
             )
 
             if model.expandedIsland == .inputSource {
@@ -227,6 +228,12 @@ struct StatusControlCenterView: View {
             }
         }
     }
+
+    private func toggleIsland(_ island: StatusIsland) {
+        withAnimation(reduceMotion ? nil : StatusMotion.expansion) {
+            model.toggle(island)
+        }
+    }
 }
 
 private struct IslandHeader: View {
@@ -238,47 +245,54 @@ private struct IslandHeader: View {
     let expanded: Bool
     var toggle: Binding<Bool>?
     var toggleDisabled = false
+    let action: () -> Void
 
     var body: some View {
         HStack(spacing: 12) {
-            Group {
-                if let badge {
-                    Text(badge)
-                        .font(.system(size: 15, weight: .bold))
-                } else {
-                    Image(systemName: symbol)
-                        .font(.system(size: 20, weight: .semibold))
-                        .symbolRenderingMode(.hierarchical)
+            Button(action: action) {
+                HStack(spacing: 12) {
+                    Group {
+                        if let badge {
+                            Text(badge)
+                                .font(.system(size: 15, weight: .bold))
+                        } else {
+                            Image(systemName: symbol)
+                                .font(.system(size: 20, weight: .semibold))
+                                .symbolRenderingMode(.hierarchical)
+                        }
+                    }
+                    .foregroundStyle(.tint)
+                    .frame(width: 42, height: 42)
+                    .background(.primary.opacity(0.1), in: Circle())
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(title).font(.headline)
+                        Text(subtitle)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(expanded ? 2 : 1)
+                    }
+
+                    Spacer(minLength: 8)
+
+                    if toggle == nil, let trailing {
+                        Text(trailing)
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Image(systemName: expanded ? "chevron.up" : "chevron.down")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tertiary)
                 }
             }
-            .foregroundStyle(.tint)
-            .frame(width: 42, height: 42)
-            .background(.primary.opacity(0.1), in: Circle())
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.headline)
-                Text(subtitle)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(expanded ? 2 : 1)
-            }
-
-            Spacer(minLength: 8)
+            .buttonStyle(.plain)
 
             if let toggle {
                 Toggle("", isOn: toggle)
                     .labelsHidden()
                     .disabled(toggleDisabled)
-                    .onTapGesture { }
-            } else if let trailing {
-                Text(trailing)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.secondary)
             }
-
-            Image(systemName: expanded ? "chevron.up" : "chevron.down")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.tertiary)
         }
     }
 }
@@ -308,23 +322,56 @@ private struct EnergyModeRow: View {
     let title: String
     let symbol: String
     let selected: Bool
+    let action: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isHovered = false
 
     var body: some View {
-        HStack(spacing: 11) {
-            ZStack {
-                Circle().fill(selected ? Color.accentColor : Color.primary.opacity(0.12))
-                Image(systemName: symbol)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(selected ? .white : .secondary)
+        Button(action: action) {
+            HStack(spacing: 11) {
+                ZStack {
+                    Circle().fill(selected ? Color.accentColor : Color.primary.opacity(0.12))
+                    Image(systemName: symbol)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(selected ? .white : .secondary)
+                }
+                .frame(width: 34, height: 34)
+                Text(title)
+                    .foregroundStyle(selected ? .primary : .secondary)
+                Spacer()
+                if selected {
+                    Image(systemName: "checkmark")
+                        .foregroundStyle(.secondary)
+                } else {
+                    Image(systemName: "arrow.up.forward")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
             }
-            .frame(width: 34, height: 34)
-            Text(title)
-                .foregroundStyle(selected ? .primary : .secondary)
-            Spacer()
-            if selected { Image(systemName: "checkmark").foregroundStyle(.secondary) }
+            .contentShape(Rectangle())
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
         }
+        .buttonStyle(.plain)
+        .background(
+            isHovered ? Color.primary.opacity(0.085) : .clear,
+            in: RoundedRectangle(cornerRadius: 10)
+        )
+        .overlay {
+            if isHovered {
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(.white.opacity(0.12), lineWidth: 0.7)
+            }
+        }
+        .onHover { hovered in
+            withAnimation(reduceMotion ? nil : StatusMotion.hover) {
+                isHovered = hovered
+            }
+        }
+        .help("Change Energy Mode in Battery Settings")
         .accessibilityElement(children: .combine)
         .accessibilityValue(selected ? "Selected" : "Not selected")
+        .accessibilityHint("Opens Battery Settings to change Energy Mode")
     }
 }
 

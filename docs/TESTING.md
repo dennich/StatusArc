@@ -132,14 +132,17 @@ panel label rather than claiming active charging.
 - Confirm Connectivity contains a working system toggle, nearby and known
   networks, and Network and Wi-Fi Settings destinations.
 - Confirm Battery shows its percentage, power state, power source, and the
-  current public Energy Mode state. Confirm read-only Energy Mode choices are
-  disabled rather than pretending to change protected system state.
+  current public Energy Mode state. Confirm each Energy Mode row has pointer
+  hover and keyboard focus feedback, and opens Battery Settings for the
+  system-owned selection.
 - Confirm all three Energy Mode rows show circular battery symbols and the
   current public mode uses the accented state.
 - On macOS 26 or later, confirm the islands use Liquid Glass and matched
   expansion transitions. On macOS 13–25, confirm they use semantic material
   with readable text and smooth state changes.
 - Enable Reduce Motion and confirm islands change state without transition.
+- Repeatedly expand, collapse, and switch islands; confirm the glass and content
+  follow one continuous ease-out curve without window-edge jitter or clipping.
 - Confirm clicking outside the panel, pressing Escape, or clicking the status
   item again dismisses it.
 - Confirm Battery Settings, Network Settings, Keyboard Settings, Emoji &

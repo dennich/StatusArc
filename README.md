@@ -77,6 +77,7 @@ supported versions.
 - Time remaining when macOS provides it
 - Current Automatic or Low Power energy-mode state
 - Circular native battery symbols for Automatic, Low Power, and High Power
+- Hoverable Energy Mode actions that open Battery Settings for system-owned changes
 - Shortcut to energy details in Activity Monitor
 - Shortcut to Battery Settings
 
@@ -170,9 +171,9 @@ See [PRIVACY.md](PRIVACY.md) for more detail.
   join UI.
 - Apple does not expose public third-party controls for Charge to Full Now,
   changing Energy Mode, enumerating significant-energy apps, or toggling Show
-  Input Source Name. StatusArc reports the public state and opens the matching
-  System Settings or Activity Monitor destination instead of presenting a
-  control that cannot perform its labeled action.
+  Input Source Name. StatusArc reports the public state. Energy Mode rows are
+  real keyboard-accessible buttons with native hover feedback, and open the
+  matching Battery Settings destination where macOS owns the actual selection.
 - Enterprise/802.1X Wi-Fi is handed off to macOS Wi-Fi Settings because
   identities, certificates, and managed credentials are better handled by the
   system.

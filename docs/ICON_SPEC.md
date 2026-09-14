@@ -90,7 +90,8 @@ transparent left inset and unused outer padding:
   original 8 × 12-point bounds.
 - External-power plug: 36-point image and item width. Fit the vertical plug
   within 9 × 13 points and use semibold weight so it balances the bolt.
-  Preserve each symbol's aspect ratio and its gap to the arc.
+  Preserve each symbol's aspect ratio. Position both accessories 2 points
+  farther right than the initial 10-point-radius composition.
 
 The image and native item widths change together during the 180 ms transition.
 The accessory fades at the expanding or contracting edge. Icon artwork is never

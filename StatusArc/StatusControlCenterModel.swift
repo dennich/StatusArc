@@ -1,6 +1,5 @@
 import Combine
 import Foundation
-import SwiftUI
 
 enum StatusIsland: String, Hashable {
     case battery
@@ -73,15 +72,8 @@ final class StatusControlCenterModel: ObservableObject {
         }
     }
 
-    func toggle(_ island: StatusIsland, reduceMotion: Bool) {
-        let changes = {
-            self.expandedIsland = self.expandedIsland == island ? nil : island
-        }
-        if reduceMotion {
-            changes()
-        } else {
-            withAnimation(.spring(response: 0.34, dampingFraction: 0.86), changes)
-        }
+    func toggle(_ island: StatusIsland) {
+        expandedIsland = expandedIsland == island ? nil : island
     }
 
     func update(

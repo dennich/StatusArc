@@ -103,9 +103,9 @@ final class StatusIconRenderer {
                 dim: dim
             )
 
-            // Keep the accessory close to the smaller Figma arc without
-            // changing the symbol itself or the dynamic status-item widths.
-            let accessoryCenterX = compositeRect.midX + 12 + accessoryWidth / 2
+            // Keep the accessory clear of the longer arc without changing the
+            // symbol itself or the dynamic status-item widths.
+            let accessoryCenterX = compositeRect.midX + 14 + accessoryWidth / 2
             func drawAccessory(_ image: NSImage?, opacity: CGFloat) {
                 guard let image, opacity > 0 else { return }
                 image.draw(

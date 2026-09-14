@@ -22,6 +22,9 @@ a SwiftUI-hosted panel containing one island for each component. On macOS 26
 and later the islands use public `GlassEffectContainer`, `glassEffect`, and
 matched glass transitions. Earlier supported versions use semantic system
 material and ordinary matched animation. Reduce Motion disables transitions.
+One shared cubic timing curve drives island layout. AppKit grows the transparent
+hosting panel before expansion and delays contraction until SwiftUI completes,
+so two layout engines never animate the same edge at once.
 
 AppKit continues to own `NSStatusItem`, system lifecycle, actions, and dialogs.
 On macOS 27 and later the panel participates in the public
