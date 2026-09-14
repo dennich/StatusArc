@@ -2,7 +2,15 @@ import AppKit
 import Carbon
 import CoreWLAN
 
-final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemValidation {
+    private enum WiFiOperation: Equatable {
+        case idle
+        case changingPower(enabled: Bool)
+        case scanning
+        case connecting(ssid: String)
+        case disconnecting(ssid: String?)
+    }
+
     private let statusItem = NSStatusBar.system.statusItem(withLength: StatusIconRenderer.baseItemWidth)
     private let monitor = SystemStatusMonitor()
     private let actions = SystemActions()
@@ -10,11 +18,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let updateManager = UpdateManager()
 
     private var fallbackRefreshTimer: Timer?
+    private var appearanceObservation: NSKeyValueObservation?
     private var lastIconSnapshot: StatusSnapshot?
     private var iconAnimation: StatusIconAnimation?
     private var inputSources: [TISInputSource] = []
     private var scannedNetworks: [CWNetwork] = []
-    private var isScanningNetworks = false
+    private var wifiOperation: WiFiOperation = .idle
 
     private let batteryItem = NSMenuItem(title: "Battery", action: nil, keyEquivalent: "")
     private let batteryPowerItem = NSMenuItem(title: "Power Source", action: nil, keyEquivalent: "")
@@ -63,6 +72,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         fallbackRefreshTimer?.invalidate()
+        appearanceObservation?.invalidate()
         monitor.stopMonitoring()
         iconAnimation?.stop()
         updateManager.stop()
@@ -76,12 +86,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             button.imageScaling = .scaleNone
             button.toolTip = "StatusArc"
             button.setAccessibilityLabel("StatusArc")
+            appearanceObservation = button.observe(
+                \.effectiveAppearance,
+                options: [.new]
+            ) { [weak self] _, _ in
+                DispatchQueue.main.async {
+                    self?.refresh()
+                }
+            }
         }
     }
 
     private func configureMenu() {
         let menu = NSMenu()
         menu.delegate = self
+        wifiNetworksMenu.autoenablesItems = false
+        wifiDetailsMenu.autoenablesItems = false
+        inputSourcesMenu.autoenablesItems = false
 
         batteryItem.isEnabled = false
         batteryPowerItem.isEnabled = false
@@ -140,11 +161,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         ))
 
         menu.addItem(actionItem(
-            "Keyboard Viewer…",
-            #selector(showKeyboardViewer)
-        ))
-
-        menu.addItem(actionItem(
             "Keyboard Settings…",
             #selector(openKeyboardSettings)
         ))
@@ -169,19 +185,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func sectionItem(_ title: String) -> NSMenuItem {
+        if #available(macOS 14.0, *) {
+            return NSMenuItem.sectionHeader(title: title)
+        }
+
         let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
         item.isEnabled = false
-
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: NSFont.systemFontSize, weight: .semibold),
-            .foregroundColor: NSColor.secondaryLabelColor
-        ]
-
-        item.attributedTitle = NSAttributedString(
-            string: title,
-            attributes: attributes
-        )
-
         return item
     }
 
@@ -202,6 +211,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // MARK: - Menu lifecycle
 
     func menuWillOpen(_ menu: NSMenu) {
+        let optionPressed = NSApp.currentEvent?.modifierFlags.contains(.option) == true
+        wifiDetailsItem.isHidden = !optionPressed
         refresh()
         updateApplicationMenu()
         rebuildInputSourcesMenu()
@@ -215,6 +226,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        if menuItem === wifiToggleItem || menuItem === disconnectWiFiItem {
+            return wifiOperation == .idle
+        }
+        if menuItem === wifiNetworksItem {
+            return actions.wifiPowerOn
+        }
+        if menuItem === wifiDetailsItem {
+            return actions.wifiPowerOn
+                && (actions.currentSSID != nil
+                    || (actions.wifiInterface?.rssiValue() ?? 0) < 0)
+        }
+        return true
+    }
+
     @objc private func refreshTimerFired() {
         refresh()
     }
@@ -222,6 +248,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // MARK: - Status refresh
 
     private func refresh() {
+        reconcileWiFiOperation()
         let snapshot = monitor.snapshot()
 
         updateStatusIcon(snapshot)
@@ -306,7 +333,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func updateNetworkMenu(_ snapshot: StatusSnapshot) {
         switch snapshot.network {
-        case .wifi(let strength, let rssi):
+        case .wifi(let strength, let rssi, let connectivity):
             let label: String
             switch strength {
             case 3: label = "Strong"
@@ -317,24 +344,61 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
             let ssidText = actions.currentSSID.map { " • \($0)" } ?? ""
 
+            let connectivityText = connectivity == .localOnly
+                ? " • No Internet Connection"
+                : ""
+
             if let rssi, strength > 0 {
-                networkItem.title = "Network: Wi-Fi\(ssidText) • \(label) (\(rssi) dBm)"
+                networkItem.title = "Network: Wi-Fi\(ssidText) • \(label) (\(rssi) dBm)\(connectivityText)"
             } else {
-                networkItem.title = "Network: Wi-Fi\(ssidText) • \(label)"
+                networkItem.title = "Network: Wi-Fi\(ssidText) • \(label)\(connectivityText)"
             }
 
-        case .ethernet(let interfaceName):
-            networkItem.title = "Network: Ethernet • \(interfaceName)"
+        case .wifiDisconnected:
+            networkItem.title = "Network: Wi-Fi • Disconnected"
 
-        case .other(let interfaceName):
-            networkItem.title = "Network: \(interfaceName)"
+        case .wifiOff:
+            networkItem.title = "Network: Wi-Fi • Off"
+
+        case .ethernet(let interfaceName, let connectivity):
+            networkItem.title = connectivity == .internet
+                ? "Network: Ethernet • \(interfaceName)"
+                : "Network: Ethernet • No Internet Connection"
+
+        case .other(let interfaceName, let connectivity):
+            networkItem.title = connectivity == .internet
+                ? "Network: \(interfaceName)"
+                : "Network: \(interfaceName) • No Internet Connection"
 
         case .disconnected:
             networkItem.title = "Network: Disconnected"
         }
 
-        wifiToggleItem.title = actions.wifiPowerOn ? "Wi-Fi: On" : "Wi-Fi: Off"
-        wifiToggleItem.state = actions.wifiPowerOn ? .on : .off
+        switch wifiOperation {
+        case .scanning:
+            networkItem.title += " • Scanning…"
+        case .connecting(let ssid):
+            networkItem.title = "Network: Connecting to “\(ssid)”…"
+        case .disconnecting(let ssid):
+            networkItem.title = ssid.map {
+                "Network: Disconnecting from “\($0)”…"
+            } ?? "Network: Disconnecting…"
+        case .changingPower, .idle:
+            break
+        }
+
+        switch wifiOperation {
+        case .changingPower(true):
+            wifiToggleItem.title = "Wi-Fi: Turning On…"
+        case .changingPower(false):
+            wifiToggleItem.title = "Wi-Fi: Turning Off…"
+        default:
+            wifiToggleItem.title = actions.wifiPowerOn
+                ? "Turn Wi-Fi Off"
+                : "Turn Wi-Fi On"
+        }
+        wifiToggleItem.state = .off
+        wifiToggleItem.isEnabled = wifiOperation == .idle
 
         let hasWiFiAssociation = actions.wifiPowerOn
             && (actions.currentSSID != nil || (actions.wifiInterface?.rssiValue() ?? 0) < 0)
@@ -346,8 +410,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             disconnectWiFiItem.title = "Disconnect Wi-Fi"
         }
 
+        disconnectWiFiItem.isEnabled = wifiOperation == .idle
+
         wifiNetworksItem.isEnabled = actions.wifiPowerOn
-        wifiDetailsItem.isEnabled = actions.wifiPowerOn
+        wifiDetailsItem.isEnabled = hasWiFiAssociation
     }
 
     private func updateInputMenu(_ snapshot: StatusSnapshot) {
@@ -369,39 +435,142 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func formattedDuration(_ minutes: Int) -> String {
-        let hours = minutes / 60
-        let remainder = minutes % 60
-
-        if hours > 0 && remainder > 0 {
-            return "\(hours)h \(remainder)m"
-        } else if hours > 0 {
-            return "\(hours)h"
-        } else {
-            return "\(remainder)m"
-        }
+        let formatter = DateComponentsFormatter()
+        formatter.allowedUnits = [.hour, .minute]
+        formatter.unitsStyle = .abbreviated
+        formatter.zeroFormattingBehavior = .dropAll
+        return formatter.string(from: TimeInterval(minutes * 60)) ?? "\(minutes)m"
     }
 
     // MARK: - Wi-Fi controls
 
     @objc private func toggleWiFi() {
+        guard wifiOperation == .idle else { return }
+        let enabled = !actions.wifiPowerOn
+        wifiOperation = .changingPower(enabled: enabled)
+        refresh()
+
         do {
-            try actions.setWiFiPower(!actions.wifiPowerOn)
+            try actions.setWiFiPower(enabled)
             refresh()
             rebuildWiFiNetworksMenu(using: [])
+            clearWiFiOperationAfterDelay()
         } catch {
+            wifiOperation = .idle
+            refresh()
             showError(error, title: "Couldn’t Change Wi-Fi")
         }
     }
 
     @objc private func disconnectWiFi() {
+        guard wifiOperation == .idle else { return }
+        wifiOperation = .disconnecting(ssid: actions.currentSSID)
         actions.disconnectWiFi()
         refresh()
+        clearWiFiOperationAfterDelay()
+    }
+
+    private func reconcileWiFiOperation() {
+        switch wifiOperation {
+        case .changingPower(let enabled) where actions.wifiPowerOn == enabled:
+            wifiOperation = .idle
+        case .connecting(let ssid) where actions.currentSSID == ssid:
+            wifiOperation = .idle
+        case .disconnecting where actions.currentSSID == nil:
+            wifiOperation = .idle
+        default:
+            break
+        }
+    }
+
+    private func clearWiFiOperationAfterDelay() {
+        let operation = wifiOperation
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+            guard let self, self.wifiOperation == operation else { return }
+            self.wifiOperation = .idle
+            self.refresh()
+        }
+    }
+
+    private func addWiFiNetworkSections() {
+        let currentSSID = actions.currentSSID
+        let knownNames = actions.knownWiFiNetworkNames()
+        let indexed = scannedNetworks.enumerated().compactMap { index, network in
+            network.ssid.map { (index: index, network: network, ssid: $0) }
+        }
+
+        if let current = indexed.first(where: { $0.ssid == currentSSID }) {
+            wifiNetworksMenu.addItem(networkItem(for: current, isCurrent: true))
+            wifiNetworksMenu.addItem(.separator())
+        }
+
+        let known = indexed.filter {
+            knownNames.contains($0.ssid) && $0.ssid != currentSSID
+        }
+        if !known.isEmpty {
+            wifiNetworksMenu.addItem(sectionItem("Known Networks"))
+            known.forEach {
+                wifiNetworksMenu.addItem(networkItem(for: $0, isCurrent: false))
+            }
+        }
+
+        let other = indexed.filter {
+            !knownNames.contains($0.ssid) && $0.ssid != currentSSID
+        }
+        if !other.isEmpty {
+            if !known.isEmpty {
+                wifiNetworksMenu.addItem(.separator())
+            }
+            wifiNetworksMenu.addItem(sectionItem("Other Networks"))
+            other.forEach {
+                wifiNetworksMenu.addItem(networkItem(for: $0, isCurrent: false))
+            }
+        }
+    }
+
+    private func networkItem(
+        for entry: (index: Int, network: CWNetwork, ssid: String),
+        isCurrent: Bool
+    ) -> NSMenuItem {
+        let item = NSMenuItem(
+            title: entry.ssid,
+            action: isCurrent ? nil : #selector(connectToWiFiNetwork(_:)),
+            keyEquivalent: ""
+        )
+        item.target = self
+        item.tag = entry.index
+        item.state = isCurrent ? .on : .off
+        item.isEnabled = !isCurrent && wifiOperation == .idle
+
+        let secured = !actions.isOpenNetwork(entry.network)
+        if secured {
+            item.image = NSImage(
+                systemSymbolName: "lock.fill",
+                accessibilityDescription: "Secured network"
+            )
+        }
+
+        let strength = actions.signalStrength(for: entry.network)
+        let signalDescription: String
+        switch strength {
+        case 3: signalDescription = "strong signal"
+        case 2: signalDescription = "medium signal"
+        case 1: signalDescription = "weak signal"
+        default: signalDescription = "unavailable signal"
+        }
+        item.setAccessibilityLabel(
+            "\(entry.ssid), \(signalDescription)\(secured ? ", secured" : "")"
+        )
+
+        if case .connecting(let ssid) = wifiOperation, ssid == entry.ssid {
+            item.title = "\(entry.ssid) — Connecting…"
+        }
+
+        return item
     }
 
     private func rebuildWiFiNetworksMenu(using networks: [CWNetwork]) {
-        if !networks.isEmpty {
-            scannedNetworks = networks
-        }
+        scannedNetworks = networks
 
         wifiNetworksMenu.removeAllItems()
 
@@ -412,7 +581,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return
         }
 
-        if isScanningNetworks {
+        if case .scanning = wifiOperation {
             let scanning = NSMenuItem(title: "Scanning…", action: nil, keyEquivalent: "")
             scanning.isEnabled = false
             wifiNetworksMenu.addItem(scanning)
@@ -447,45 +616,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
             wifiNetworksMenu.addItem(empty)
         } else {
-            let currentSSID = actions.currentSSID
-
-            for (index, network) in scannedNetworks.prefix(15).enumerated() {
-                guard let ssid = network.ssid, !ssid.isEmpty else {
-                    continue
-                }
-
-                let item = NSMenuItem(
-                    title: ssid,
-                    action: #selector(connectToWiFiNetwork(_:)),
-                    keyEquivalent: ""
-                )
-                item.target = self
-                item.tag = index
-
-                if ssid == currentSSID {
-                    item.state = .on
-                }
-
-                if !actions.isOpenNetwork(network) {
-                    item.image = NSImage(
-                        systemSymbolName: "lock.fill",
-                        accessibilityDescription: "Secured network"
-                    )
-                }
-
-                wifiNetworksMenu.addItem(item)
-            }
+            addWiFiNetworkSections()
         }
 
         wifiNetworksMenu.addItem(.separator())
 
         let refreshNetworks = NSMenuItem(
-            title: isScanningNetworks ? "Scanning…" : "Refresh Nearby Networks",
+            title: wifiOperation == .scanning ? "Scanning…" : "Refresh Nearby Networks",
             action: #selector(scanNetworksWithPermission),
-            keyEquivalent: "r"
+            keyEquivalent: ""
         )
         refreshNetworks.target = self
-        refreshNetworks.isEnabled = !isScanningNetworks
+        refreshNetworks.isEnabled = wifiOperation == .idle
         wifiNetworksMenu.addItem(refreshNetworks)
 
         let otherNetwork = NSMenuItem(
@@ -494,11 +636,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             keyEquivalent: ""
         )
         otherNetwork.target = self
+        otherNetwork.isEnabled = wifiOperation == .idle
         wifiNetworksMenu.addItem(otherNetwork)
 
-        if actions.locationAccess == .denied {
-            wifiNetworksMenu.addItem(.separator())
+        wifiNetworksMenu.addItem(.separator())
+        wifiNetworksMenu.addItem(actionItem(
+            "Wi-Fi Settings…",
+            #selector(openWiFiSettings)
+        ))
 
+        if actions.locationAccess == .denied {
             let privacy = NSMenuItem(
                 title: "Open Location Privacy Settings…",
                 action: #selector(openLocationPrivacySettings),
@@ -517,7 +664,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         requestPermission: Bool,
         showErrors: Bool
     ) {
-        guard !isScanningNetworks, actions.wifiPowerOn else {
+        guard wifiOperation == .idle, actions.wifiPowerOn else {
             return
         }
 
@@ -535,13 +682,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 return
             }
 
-            self.isScanningNetworks = true
+            self.wifiOperation = .scanning
             self.rebuildWiFiNetworksMenu(using: [])
 
             self.actions.scanWiFiNetworks { [weak self] result in
                 guard let self else { return }
 
-                self.isScanningNetworks = false
+                self.wifiOperation = .idle
 
                 switch result {
                 case .success(let networks):
@@ -565,7 +712,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func connectToWiFiNetwork(_ sender: NSMenuItem) {
-        guard scannedNetworks.indices.contains(sender.tag) else {
+        guard wifiOperation == .idle,
+              scannedNetworks.indices.contains(sender.tag) else {
             return
         }
 
@@ -594,8 +742,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
         }
 
+        let ssid = network.ssid ?? "Wi-Fi"
+        wifiOperation = .connecting(ssid: ssid)
+        rebuildWiFiNetworksMenu(using: scannedNetworks)
+
         actions.connect(to: network, password: password) { [weak self] error in
             guard let self else { return }
+
+            self.wifiOperation = .idle
 
             if let error {
                 self.showError(error, title: "Couldn’t Join Wi-Fi Network")
@@ -606,46 +760,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func joinOtherNetwork() {
-        let alert = NSAlert()
-        alert.messageText = "Join Other Wi-Fi Network"
-        alert.informativeText = "Enter a hidden or unlisted network name. Leave the password blank for an open network."
-        alert.addButton(withTitle: "Join")
-        alert.addButton(withTitle: "Cancel")
-
-        let container = NSView(frame: NSRect(x: 0, y: 0, width: 300, height: 58))
-
-        let nameField = NSTextField(frame: NSRect(x: 0, y: 32, width: 300, height: 24))
-        nameField.placeholderString = "Network name (SSID)"
-
-        let passwordField = NSSecureTextField(frame: NSRect(x: 0, y: 2, width: 300, height: 24))
-        passwordField.placeholderString = "Password (optional)"
-
-        container.addSubview(nameField)
-        container.addSubview(passwordField)
-        alert.accessoryView = container
-
-        NSApp.activate(ignoringOtherApps: true)
-
-        guard alert.runModal() == .alertFirstButtonReturn else {
-            return
-        }
-
-        let name = nameField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !name.isEmpty else {
-            return
-        }
-
-        let suppliedPassword = passwordField.stringValue.isEmpty
-            ? nil
-            : passwordField.stringValue
+        guard wifiOperation == .idle else { return }
+        guard let credentials = WiFiDialogs.requestHiddenNetwork() else { return }
+        let name = credentials.networkName
+        let suppliedPassword = credentials.password
 
         actions.requestWiFiNameAccessIfNeeded { [weak self] in
             guard let self else { return }
 
-            self.isScanningNetworks = true
+            guard self.actions.locationAccess != .denied else {
+                self.showMessage(
+                    title: "Location Access Is Required",
+                    message: "macOS requires Location access before an app can find a hidden Wi-Fi network by name. You can enable access for StatusArc or join it in Wi-Fi Settings."
+                )
+                return
+            }
+
+            self.wifiOperation = .scanning
             self.actions.findWiFiNetwork(named: name) { [weak self] result in
                 guard let self else { return }
-                self.isScanningNetworks = false
+                self.wifiOperation = .idle
 
                 switch result {
                 case .success(let network):
@@ -666,8 +800,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                         return
                     }
 
-                    var password = suppliedPassword
-                    if !self.actions.isOpenNetwork(network), password == nil {
+                    let isOpenNetwork = self.actions.isOpenNetwork(network)
+                    var password = isOpenNetwork ? nil : suppliedPassword
+                    if !isOpenNetwork, password == nil {
                         guard let resolvedPassword = self.actions.savedUserPassword(for: network)
                             ?? self.askForPassword(networkName: name) else {
                             return
@@ -675,8 +810,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                         password = resolvedPassword
                     }
 
+                    self.wifiOperation = .connecting(ssid: name)
                     self.actions.connect(to: network, password: password) { [weak self] error in
                         guard let self else { return }
+
+                        self.wifiOperation = .idle
 
                         if let error {
                             self.showError(error, title: "Couldn’t Join Wi-Fi Network")
@@ -693,25 +831,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func askForPassword(networkName: String) -> String? {
-        let alert = NSAlert()
-        alert.messageText = "Password for “\(networkName)”"
-        alert.informativeText = "Enter the Wi-Fi password."
-        alert.addButton(withTitle: "Join")
-        alert.addButton(withTitle: "Cancel")
-
-        let field = NSSecureTextField(
-            frame: NSRect(x: 0, y: 0, width: 280, height: 24)
-        )
-        field.placeholderString = "Password"
-        alert.accessoryView = field
-
-        NSApp.activate(ignoringOtherApps: true)
-
-        guard alert.runModal() == .alertFirstButtonReturn else {
-            return nil
-        }
-
-        return field.stringValue
+        WiFiDialogs.requestPassword(networkName: networkName)
     }
 
     private func rebuildWiFiDetailsMenu() {
@@ -789,18 +909,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NSApp.orderFrontCharacterPalette(nil)
     }
 
-    @objc private func showKeyboardViewer() {
-        // Apple does not provide a public API for directly opening Keyboard
-        // Viewer. Its own Input menu calls a private TextInputMenuAgent action.
-        // Avoiding Accessibility/UI scripting keeps StatusArc permission-light
-        // and reliable, so take the user to the exact setting instead.
-        showMessage(
-            title: "Keyboard Viewer",
-            message: "macOS doesn’t expose a public API for opening Keyboard Viewer directly. StatusArc can switch input sources and open Emoji & Symbols itself; Keyboard Viewer still has to be enabled from Apple’s Input menu."
-        )
-        openKeyboardSettings()
-    }
-
     // MARK: - System destinations
 
     @objc private func openNetworkSettings() {
@@ -809,7 +917,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         )
     }
 
-    private func openWiFiSettings() {
+    @objc private func openWiFiSettings() {
         openSettings(
             deepLink: "x-apple.systempreferences:com.apple.wifi-settings-extension"
         )

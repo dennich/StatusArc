@@ -78,7 +78,15 @@ menu label rather than claiming active charging.
 - Confirm a secured-network join does not show a System keychain administrator prompt.
 - If no user-keychain password is available, confirm StatusArc asks for the Wi-Fi password.
 - Confirm no password is printed to the Xcode console.
-- Open Connection Details and Wireless Diagnostics.
+- Confirm the hidden-network dialog labels Network Name, Security, and Password;
+  disables Join until a name is entered; and supports Show Password.
+- Confirm scans group the current, known, and other networks without truncating results.
+- While scanning, connecting, disconnecting, and toggling power, confirm duplicate
+  actions are disabled and the menu reports the transient state.
+- Check Wi-Fi off, Wi-Fi on but disconnected, and a local connection without an
+  Internet path; confirm the menu and accessibility value distinguish them.
+- Option-open StatusArc and inspect Connection Details. Confirm IP address,
+  router, band, protocol, security, radio values, and Wireless Diagnostics.
 
 ## Ethernet/LAN
 
@@ -86,6 +94,8 @@ menu label rather than claiming active charging.
 - Confirm macOS makes it the primary path when expected.
 - Confirm the bottom dots switch to a solid line.
 - Disconnect Ethernet and confirm StatusArc returns to the active Wi-Fi state.
+- Make a VPN or tunnel interface primary and confirm StatusArc does not show the
+  Ethernet line for it.
 
 ## Input sources
 
@@ -108,3 +118,6 @@ crashing StatusArc.
 
 After any visible rendering change, test both a light and dark menu-bar context
 when possible.
+- Enable Increase Contrast and confirm dim tracks remain legible.
+- Enable Differentiate Without Color and confirm low battery and Low Power Mode
+  remain distinguishable by arc weight and dash pattern.

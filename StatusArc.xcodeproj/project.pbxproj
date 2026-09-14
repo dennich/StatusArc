@@ -21,6 +21,8 @@
 		A10000000000000000000012 /* UpdateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000014 /* UpdateManager.swift */; };
 		A10000000000000000000013 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = A90000000000000000000002 /* Sparkle */; };
 		A10000000000000000000014 /* InputSourceIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000015 /* InputSourceIdentity.swift */; };
+		A10000000000000000000015 /* WiFiDialogs.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000016 /* WiFiDialogs.swift */; };
+		A10000000000000000000016 /* Network.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A20000000000000000000017 /* Network.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -39,6 +41,8 @@
 		A20000000000000000000013 /* CoreLocation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = System/Library/Frameworks/CoreLocation.framework; sourceTree = SDKROOT; };
 		A20000000000000000000014 /* UpdateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateManager.swift; sourceTree = "<group>"; };
 		A20000000000000000000015 /* InputSourceIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputSourceIdentity.swift; sourceTree = "<group>"; };
+		A20000000000000000000016 /* WiFiDialogs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WiFiDialogs.swift; sourceTree = "<group>"; };
+		A20000000000000000000017 /* Network.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Network.framework; path = System/Library/Frameworks/Network.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -53,6 +57,7 @@
 				A10000000000000000000009 /* SystemConfiguration.framework in Frameworks */,
 				A10000000000000000000011 /* CoreLocation.framework in Frameworks */,
 				A10000000000000000000013 /* Sparkle in Frameworks */,
+				A10000000000000000000016 /* Network.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +83,7 @@
 				A20000000000000000000015 /* InputSourceIdentity.swift */,
 				A20000000000000000000004 /* StatusIconRenderer.swift */,
 				A20000000000000000000012 /* SystemActions.swift */,
+				A20000000000000000000016 /* WiFiDialogs.swift */,
 				A20000000000000000000009 /* Info.plist */,
 			);
 			path = StatusArc;
@@ -92,6 +98,7 @@
 				A20000000000000000000008 /* Carbon.framework */,
 				A20000000000000000000011 /* SystemConfiguration.framework */,
 				A20000000000000000000013 /* CoreLocation.framework */,
+				A20000000000000000000017 /* Network.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -185,6 +192,7 @@
 				A10000000000000000000014 /* InputSourceIdentity.swift in Sources */,
 				A10000000000000000000004 /* StatusIconRenderer.swift in Sources */,
 				A10000000000000000000010 /* SystemActions.swift in Sources */,
+				A10000000000000000000015 /* WiFiDialogs.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

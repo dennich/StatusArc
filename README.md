@@ -27,9 +27,10 @@ battery percentage and the rest is dimmed.
 
 Low-battery urgency takes precedence over Low Power Mode. Charging does not
 change the arc color: a small `bolt.fill` SF Symbol appears immediately to the
-right of the composite icon. A low-battery
+right of the composite icon. A `powerplug.fill` appears when external power is
+connected but charging is paused or complete. A low-battery
 warning is represented by the red arc alone. No warning dot is shown. The item
-width is 24 points without the bolt and 34 points while charging. Neighboring
+width is 24 points without an accessory and 34 points with either accessory. Neighboring
 menu-bar items move as it expands or contracts.
 Accessory changes use a short shift-and-fade transition, disabled when Reduce
 Motion is enabled. Language and network indicators retain their normal semantic colors.
@@ -37,7 +38,7 @@ Motion is enabled. Language and network indicators retain their normal semantic 
 ### Input source — center
 
 The center shows a compact two-letter code for the current keyboard/input
-source, such as `EN`, `UA`, or `DE`.
+source, such as `US`, `UA`, or `DE`.
 
 Ukrainian is intentionally shown as `UA` in the UI.
 
@@ -50,6 +51,10 @@ Ukrainian is intentionally shown as `UA` in the UI.
 | Weak Wi-Fi | `● ○ ○` |
 | Ethernet/LAN | solid line |
 | No active network | `○ ○ ○` |
+
+The menu and accessibility description distinguish Wi-Fi off, disconnected,
+and connected without an Internet path. VPN, tunnel, and virtual interfaces use
+the neutral dim-dot indicator instead of being presented as Ethernet.
 
 If Wi-Fi and Ethernet are both connected, StatusArc follows the primary network
 interface reported by macOS instead of blindly preferring one.
@@ -69,10 +74,12 @@ Clicking the StatusArc icon opens a combined controls menu.
 - Wi-Fi on/off
 - Disconnect from the current Wi-Fi network
 - Scan nearby Wi-Fi networks
+- Group the full scan into known and other networks, with the current network first
 - Join open and personal Wi-Fi networks
 - Use a saved Wi-Fi password from the user keychain when available
 - Join another/unlisted network
-- Connection details such as RSSI, noise, channel, transmit rate, and interface
+- Option-open StatusArc for connection details such as IP address, router,
+  security, protocol, band, RSSI, noise, channel, transmit rate, and interface
 - Open Wireless Diagnostics
 - Open Network Settings
 - Ethernet/LAN detection
@@ -144,10 +151,18 @@ See [PRIVACY.md](PRIVACY.md) for more detail.
 
 - Apple does not expose a supported public API for third-party apps to open
   Keyboard Viewer directly. StatusArc avoids private APIs and fragile
-  Accessibility/UI scripting.
+  Accessibility/UI scripting, so it does not present a menu item that promises
+  this unavailable action.
+- Apple does not expose a public API that presents or embeds its Battery, Wi-Fi,
+  or Input status menus. StatusArc therefore uses a standard AppKit `NSMenu` for
+  the one combined menu. Hidden-network and password prompts use standard
+  AppKit controls because CoreWLAN provides the action but no system join UI.
 - Enterprise/802.1X Wi-Fi is handed off to macOS Wi-Fi Settings because
   identities, certificates, and managed credentials are better handled by the
   system.
+- Public CoreWLAN scanning does not reliably identify Apple's Personal Hotspot
+  section, so nearby hotspots appear with other networks; the dedicated system
+  hotspot behavior remains available in Apple's Wi-Fi menu.
 - The project currently builds with App Sandbox disabled because of its
   system-level Wi-Fi integrations.
 - Wi-Fi signal thresholds are deliberately simple and can be tuned.
@@ -161,7 +176,9 @@ StatusArc/
 │   ├── UpdateManager.swift
 │   ├── SystemActions.swift
 │   ├── SystemStatusMonitor.swift
+│   ├── InputSourceIdentity.swift
 │   ├── StatusIconRenderer.swift
+│   ├── WiFiDialogs.swift
 │   ├── main.swift
 │   └── Info.plist
 ├── StatusArc.xcodeproj/
@@ -176,7 +193,7 @@ StatusArc/
 ```
 
 The implementation uses Apple platform frameworks including AppKit, CoreWLAN,
-CoreLocation, SystemConfiguration, Carbon, and IOKit. Sparkle is the one
+CoreLocation, Network, SystemConfiguration, Carbon, and IOKit. Sparkle is the one
 third-party runtime dependency and is pinned to a specific production release.
 The secured-network lock
 glyph is an SF Symbol rendered by macOS; no Apple symbol artwork is bundled in

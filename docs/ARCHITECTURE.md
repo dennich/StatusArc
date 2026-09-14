@@ -23,6 +23,25 @@ menu. Its content must follow the corresponding system menus, and any bespoke
 menu surface requires a documented reason that a native menu or action is
 insufficient.
 
+The public menu API also does not expose Apple's embedded Wi-Fi toggle row or
+the trailing details button from the system status menu. On macOS 13, StatusArc
+uses standard command items (`Turn Wi-Fi On` / `Turn Wi-Fi Off`) and exposes
+connection details when the combined menu is opened with Option held. This
+keeps standard menu keyboard and accessibility behavior without a custom-drawn
+menu row.
+
+The compact network zone is required to remain exactly three dots for Wi-Fi.
+When a Wi-Fi association has no usable Internet path, StatusArc therefore keeps
+the signal dots and reports the warning in the standard menu, tooltip, and
+accessibility value instead of replacing the zone with Apple's larger Wi-Fi
+warning symbol.
+
+CoreWLAN exposes scanning and association APIs but no public system-owned join
+dialog. StatusArc uses `NSAlert`, labeled AppKit fields, a system pop-up button,
+and a system checkbox for hidden-network and password entry. Enterprise/802.1X
+networks are sent to Wi-Fi Settings because the system UI owns their identities,
+certificates, and managed credential flow.
+
 ## `main.swift`
 
 Starts `NSApplication`, installs `AppDelegate`, and runs as an accessory app.
@@ -40,6 +59,7 @@ Reads passive system state:
 - battery and charging state through IOKit;
 - primary network interface through SystemConfiguration;
 - Wi-Fi RSSI through CoreWLAN;
+- Internet-path availability through Network.framework;
 - current keyboard input source through Text Input Source Services.
 
 It returns a `StatusSnapshot` used by both the renderer and menu.
@@ -76,6 +96,9 @@ StatusArc refreshes from public system notifications:
 - System Configuration primary-route changes;
 - Text Input Source selection and enabled-source changes;
 - wake and accessibility-display-option changes.
+
+Appearance changes are observed through the status button's public effective
+appearance so semantic colors redraw immediately.
 
 A 60-second fallback refresh recovers from any notification that a framework or
 OS release fails to deliver. Opening the menu also reads a fresh snapshot.

@@ -9,6 +9,12 @@ All notable user-visible changes to StatusArc are documented here.
 - Battery, network, and input-source changes now refresh from macOS events, with a low-frequency recovery refresh, instead of waiting for one-second polling.
 - External power that is paused, complete, or not actively charging now uses a plug accessory and an accurate battery menu label.
 - The center input indicator remains two letters but now prefers the specific keyboard-layout identity, while menus and accessibility use the full localized source name.
+- Wi-Fi controls now expose scanning, connecting, disconnecting, and power-transition states and prevent duplicate actions while an operation is in progress.
+- Nearby Wi-Fi networks are grouped into known and other networks without an arbitrary result limit; the current network is pinned and checked.
+- Hidden-network and password prompts now use labeled AppKit controls, native validation, security selection, and Show Password behavior.
+- Wi-Fi status now distinguishes off, disconnected, and local-only/no-Internet states. Option-opening the menu exposes IP, router, band, protocol, security, and radio details.
+- Non-Wi-Fi tunnel and virtual interfaces no longer claim to be Ethernet in the compact icon.
+- The icon responds to Increase Contrast and Differentiate Without Color, and its accessibility value follows every system-state change.
 
 ## [1.2.0] - 2026-09-12
 
@@ -16,7 +22,7 @@ All notable user-visible changes to StatusArc are documented here.
 - macOS early/final low-battery warnings now show a red arc with a dim red remainder without a separate warning dot; no custom percentage threshold is applied.
 - Low Power Mode uses a yellow arc with a dim yellow remainder unless low-battery urgency takes precedence.
 - Charging uses a small bolt to the right of the composite icon without changing the arc color; the low-battery warning remains in the arc.
-- The menu-bar item expands from 24 points without an accessory to 34 points while charging. The warning dot is removed. Original icon sizes and spacing are preserved; neighboring items move with the changing width.
+- The menu-bar item expands from 24 points without an accessory to 34 points while a charging or power-plug accessory is visible. The warning dot is removed. Original icon sizes and spacing are preserved; neighboring items move with the changing width.
 - Accessory changes use a short shift-and-fade animation that respects Reduce Motion.
 - Wi-Fi joins now run without blocking the menu, cancelling a password prompt no longer attempts a connection, and IPv6-only primary interfaces are detected.
 

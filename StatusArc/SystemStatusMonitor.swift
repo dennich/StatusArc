@@ -2,6 +2,7 @@ import AppKit
 import Carbon
 import CoreWLAN
 import IOKit.ps
+import Network
 import SystemConfiguration
 
 enum BatteryWarningLevel {
@@ -52,15 +53,25 @@ struct BatteryStatus {
     }
 }
 
+enum NetworkConnectivity: Equatable {
+    case internet
+    case localOnly
+}
+
 enum NetworkStatus {
-    case wifi(strength: Int, rssi: Int?)
-    case ethernet(interfaceName: String)
-    case other(interfaceName: String)
+    case wifi(strength: Int, rssi: Int?, connectivity: NetworkConnectivity)
+    case wifiDisconnected
+    case wifiOff
+    case ethernet(interfaceName: String, connectivity: NetworkConnectivity)
+    case other(interfaceName: String, connectivity: NetworkConnectivity)
     case disconnected
 
     var description: String {
         switch self {
-        case .wifi(let strength, _):
+        case .wifi(let strength, _, let connectivity):
+            if connectivity == .localOnly {
+                return "Wi‑Fi • No Internet Connection"
+            }
             switch strength {
             case 3: return "Wi‑Fi • Strong"
             case 2: return "Wi‑Fi • Medium"
@@ -68,11 +79,21 @@ enum NetworkStatus {
             default: return "Wi‑Fi • Disconnected"
             }
 
-        case .ethernet(let interfaceName):
-            return "Ethernet • \(interfaceName)"
+        case .wifiDisconnected:
+            return "Wi‑Fi • Disconnected"
 
-        case .other(let interfaceName):
-            return "Network • \(interfaceName)"
+        case .wifiOff:
+            return "Wi‑Fi • Off"
+
+        case .ethernet(let interfaceName, let connectivity):
+            return connectivity == .internet
+                ? "Ethernet • \(interfaceName)"
+                : "Ethernet • No Internet Connection"
+
+        case .other(let interfaceName, let connectivity):
+            return connectivity == .internet
+                ? "Network • \(interfaceName)"
+                : "Network • \(interfaceName) • No Internet Connection"
 
         case .disconnected:
             return "Disconnected"
@@ -111,11 +132,14 @@ struct StatusSnapshot {
 
 final class SystemStatusMonitor: NSObject, CWEventDelegate {
     private let wifiClient = CWWiFiClient.shared()
+    private let pathMonitor = NWPathMonitor()
+    private let pathMonitorQueue = DispatchQueue(label: "StatusArc.NetworkPath")
     private var onChange: (() -> Void)?
     private var powerSourceRunLoopSource: CFRunLoopSource?
     private var networkDynamicStore: SCDynamicStore?
     private var refreshScheduled = false
     private var isMonitoring = false
+    private var networkPathStatus: NWPath.Status = .requiresConnection
 
     func startMonitoring(onChange: @escaping () -> Void) {
         self.onChange = onChange
@@ -125,6 +149,7 @@ final class SystemStatusMonitor: NSObject, CWEventDelegate {
         startPowerSourceMonitoring()
         startWiFiMonitoring()
         startNetworkRouteMonitoring()
+        startNetworkPathMonitoring()
         startInputSourceMonitoring()
 
         let workspaceNotifications = NSWorkspace.shared.notificationCenter
@@ -155,6 +180,7 @@ final class SystemStatusMonitor: NSObject, CWEventDelegate {
             SCDynamicStoreSetDispatchQueue(networkDynamicStore, nil)
         }
         networkDynamicStore = nil
+        pathMonitor.cancel()
 
         _ = try? wifiClient.stopMonitoringAllEvents()
         wifiClient.delegate = nil
@@ -247,6 +273,17 @@ final class SystemStatusMonitor: NSObject, CWEventDelegate {
             name: Notification.Name(kTISNotifyEnabledKeyboardInputSourcesChanged as String),
             object: nil
         )
+    }
+
+    private func startNetworkPathMonitoring() {
+        pathMonitor.pathUpdateHandler = { [weak self] path in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.networkPathStatus = path.status
+                self.systemStateDidChange()
+            }
+        }
+        pathMonitor.start(queue: pathMonitorQueue)
     }
 
     @objc private func observedSystemStateDidChange() {
@@ -356,44 +393,71 @@ final class SystemStatusMonitor: NSObject, CWEventDelegate {
     }
 
     private func readNetworkStatus() -> NetworkStatus {
+        let connectivity: NetworkConnectivity = networkPathStatus == .satisfied
+            ? .internet
+            : .localOnly
+        let wifiInterfaces = wifiClient.interfaces() ?? []
+        let wifiNames = Set(wifiInterfaces.compactMap(\.interfaceName))
+        let defaultWiFi = wifiClient.interface()
+
         guard let primaryInterface = readPrimaryInterfaceName() else {
-            return .disconnected
+            guard let defaultWiFi else { return .disconnected }
+            if defaultWiFi.powerOn(), defaultWiFi.rssiValue() < 0 {
+                return .wifi(
+                    strength: strength(for: defaultWiFi.rssiValue()),
+                    rssi: defaultWiFi.rssiValue(),
+                    connectivity: .localOnly
+                )
+            }
+            return defaultWiFi.powerOn() ? .wifiDisconnected : .wifiOff
         }
 
-        if let wifiInterface = wifiClient.interface(),
-           let wifiName = wifiInterface.interfaceName,
-           primaryInterface == wifiName {
+        if wifiNames.contains(primaryInterface),
+           let wifiInterface = wifiInterfaces.first(where: {
+               $0.interfaceName == primaryInterface
+           }) {
 
             guard wifiInterface.powerOn() else {
-                return .disconnected
+                return .wifiOff
             }
 
             let rssi = wifiInterface.rssiValue()
 
             // CoreWLAN normally returns a negative RSSI while associated.
             guard rssi < 0 else {
-                return .wifi(strength: 0, rssi: nil)
+                return .wifi(
+                    strength: 0,
+                    rssi: nil,
+                    connectivity: connectivity
+                )
             }
 
-            let strength: Int
-            if rssi >= -60 {
-                strength = 3
-            } else if rssi >= -72 {
-                strength = 2
-            } else {
-                strength = 1
-            }
-
-            return .wifi(strength: strength, rssi: rssi)
+            return .wifi(
+                strength: strength(for: rssi),
+                rssi: rssi,
+                connectivity: connectivity
+            )
         }
 
         if isEthernetLike(primaryInterface) {
-            return .ethernet(interfaceName: primaryInterface)
+            return .ethernet(
+                interfaceName: primaryInterface,
+                connectivity: connectivity
+            )
         }
 
-        // Covers interfaces such as VPN/tunnel adapters. The renderer uses
-        // the same solid line because the active path is non-Wi‑Fi.
-        return .other(interfaceName: primaryInterface)
+        // Covers interfaces such as VPN/tunnel adapters. The renderer uses a
+        // neutral disconnected-style indicator instead of claiming Ethernet.
+        return .other(
+            interfaceName: primaryInterface,
+            connectivity: connectivity
+        )
+    }
+
+    private func strength(for rssi: Int) -> Int {
+        if rssi >= -60 { return 3 }
+        if rssi >= -72 { return 2 }
+        return 1
     }
 
     private func readPrimaryInterfaceName() -> String? {
@@ -428,7 +492,10 @@ final class SystemStatusMonitor: NSObject, CWEventDelegate {
     }
 
     private func isEthernetLike(_ interfaceName: String) -> Bool {
-        interfaceName.hasPrefix("en")
+        let wifiNames = Set((wifiClient.interfaces() ?? []).compactMap(\.interfaceName))
+        guard !wifiNames.contains(interfaceName) else { return false }
+
+        return interfaceName.hasPrefix("en")
             || interfaceName.hasPrefix("bridge")
             || interfaceName.hasPrefix("bond")
     }

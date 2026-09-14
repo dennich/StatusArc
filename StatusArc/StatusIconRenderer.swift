@@ -53,7 +53,12 @@ final class StatusIconRenderer {
             context.setShouldAntialias(true)
 
             let bright = NSColor.labelColor
-            let dim = NSColor.tertiaryLabelColor.withAlphaComponent(0.55)
+            let increaseContrast = NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast
+            let dim = NSColor.tertiaryLabelColor.withAlphaComponent(
+                increaseContrast ? 0.78 : 0.55
+            )
+            let differentiateWithoutColor = NSWorkspace.shared
+                .accessibilityDisplayShouldDifferentiateWithoutColor
             // The original arc has 3 points of transparent inset on its left.
             // Remove that inset without changing its radius or the bolt gap.
             let compositeRect = NSRect(
@@ -66,7 +71,8 @@ final class StatusIconRenderer {
                 rect: compositeRect,
                 battery: snapshot.battery,
                 bright: bright,
-                dim: dim
+                dim: dim,
+                differentiateWithoutColor: differentiateWithoutColor
             )
 
             self.drawLanguage(
@@ -116,7 +122,8 @@ final class StatusIconRenderer {
         rect: NSRect,
         battery: BatteryStatus?,
         bright: NSColor,
-        dim: NSColor
+        dim: NSColor,
+        differentiateWithoutColor: Bool
     ) {
         let center = CGPoint(x: rect.midX, y: 9.6)
         let radius: CGFloat = 11.1
@@ -138,8 +145,15 @@ final class StatusIconRenderer {
         // Full dim arc is always visible.
         context.saveGState()
         context.setStrokeColor(remainderColor.cgColor)
-        context.setLineWidth(lineWidth)
+        let accessibleLineWidth = differentiateWithoutColor && battery?.isLowBattery == true
+            ? lineWidth + 0.65
+            : lineWidth
+        context.setLineWidth(accessibleLineWidth)
         context.setLineCap(.round)
+        if differentiateWithoutColor && battery?.isLowPowerModeEnabled == true
+            && battery?.isLowBattery != true {
+            context.setLineDash(phase: 0, lengths: [2.4, 1.5])
+        }
         context.addArc(
             center: center,
             radius: radius,
@@ -161,8 +175,12 @@ final class StatusIconRenderer {
 
         context.saveGState()
         context.setStrokeColor(activeColor.cgColor)
-        context.setLineWidth(lineWidth)
+        context.setLineWidth(accessibleLineWidth)
         context.setLineCap(.round)
+        if differentiateWithoutColor && battery.isLowPowerModeEnabled
+            && !battery.isLowBattery {
+            context.setLineDash(phase: 0, lengths: [2.4, 1.5])
+        }
         context.addArc(
             center: center,
             radius: radius,
@@ -233,7 +251,7 @@ final class StatusIconRenderer {
         dim: NSColor
     ) {
         switch network {
-        case .wifi(let strength, _):
+        case .wifi(let strength, _, _):
             drawWiFiDots(
                 count: strength,
                 in: context,
@@ -242,14 +260,14 @@ final class StatusIconRenderer {
                 dim: dim
             )
 
-        case .ethernet, .other:
+        case .ethernet:
             drawLANLine(
                 in: context,
                 rect: rect,
                 color: bright
             )
 
-        case .disconnected:
+        case .other, .wifiDisconnected, .wifiOff, .disconnected:
             drawWiFiDots(
                 count: 0,
                 in: context,

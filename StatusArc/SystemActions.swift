@@ -2,6 +2,7 @@ import AppKit
 import Carbon
 import CoreLocation
 import CoreWLAN
+import SystemConfiguration
 
 enum WiFiLocationAccess: Equatable {
     case notDetermined
@@ -132,7 +133,10 @@ final class SystemActions: NSObject, CLLocationManagerDelegate {
             do {
                 // A named scan is directed and can locate a network that isn't
                 // present in the ordinary nearby-network list.
-                let found = try interface.scanForNetworks(withName: name)
+                let found = try interface.scanForNetworks(
+                    withName: name,
+                    includeHidden: true
+                )
                 let best = found.max { $0.rssiValue < $1.rssiValue }
 
                 DispatchQueue.main.async {
@@ -198,6 +202,16 @@ final class SystemActions: NSObject, CLLocationManagerDelegate {
             || network.supportsSecurity(.wpa3Enterprise)
     }
 
+    func knownWiFiNetworkNames() -> Set<String> {
+        guard let profiles = wifiInterface?.configuration()?.networkProfiles else {
+            return []
+        }
+
+        return Set(profiles.array.compactMap {
+            ($0 as? CWNetworkProfile)?.ssid
+        })
+    }
+
     func wiFiConnectionDetails() -> [String] {
         guard let interface = wifiInterface, interface.powerOn() else {
             return ["Wi-Fi is off"]
@@ -224,7 +238,14 @@ final class SystemActions: NSObject, CLLocationManagerDelegate {
         }
 
         if let channel = interface.wlanChannel() {
-            result.append("Channel: \(channel.channelNumber)")
+            let band: String
+            switch channel.channelBand {
+            case .band2GHz: band = "2.4 GHz"
+            case .band5GHz: band = "5 GHz"
+            case .band6GHz: band = "6 GHz"
+            default: band = "Unknown band"
+            }
+            result.append("Channel: \(channel.channelNumber) (\(band))")
         }
 
         let rate = interface.transmitRate()
@@ -236,11 +257,96 @@ final class SystemActions: NSObject, CLLocationManagerDelegate {
             result.append("Country: \(country)")
         }
 
+        if let network = currentScannedNetwork(for: interface) {
+            if let protocolName = protocolName(for: network) {
+                result.append("Protocol: \(protocolName)")
+            }
+            result.append("Security: \(securityName(for: network))")
+        }
+
+        let addressing = networkAddressing(for: interface.interfaceName)
+        for address in addressing.addresses {
+            result.append("IP Address: \(address)")
+        }
+        if let router = addressing.router {
+            result.append("Router: \(router)")
+        }
+
         if let name = interface.interfaceName, !name.isEmpty {
             result.append("Interface: \(name)")
         }
 
         return result.isEmpty ? ["Wi-Fi connected"] : result
+    }
+
+    func signalStrength(for network: CWNetwork) -> Int {
+        let rssi = network.rssiValue
+        if rssi >= -60 { return 3 }
+        if rssi >= -72 { return 2 }
+        return rssi < 0 ? 1 : 0
+    }
+
+    private func currentScannedNetwork(for interface: CWInterface) -> CWNetwork? {
+        let currentSSID = interface.ssid()
+        let currentBSSID = interface.bssid()
+        return interface.cachedScanResults()?.first(where: { network in
+            if let currentBSSID, network.bssid == currentBSSID { return true }
+            return network.ssid == currentSSID
+        })
+    }
+
+    private func protocolName(for network: CWNetwork) -> String? {
+        let modes: [(CWPHYMode, String)] = [
+            (.mode11ax, "802.11ax"),
+            (.mode11ac, "802.11ac"),
+            (.mode11n, "802.11n"),
+            (.mode11g, "802.11g"),
+            (.mode11a, "802.11a"),
+            (.mode11b, "802.11b")
+        ]
+        return modes.first(where: { network.supportsPHYMode($0.0) })?.1
+    }
+
+    private func securityName(for network: CWNetwork) -> String {
+        if network.supportsSecurity(.wpa3Enterprise) { return "WPA3 Enterprise" }
+        if network.supportsSecurity(.wpa3Personal) { return "WPA3 Personal" }
+        if network.supportsSecurity(.wpa2Enterprise) { return "WPA2 Enterprise" }
+        if network.supportsSecurity(.wpa2Personal) { return "WPA2 Personal" }
+        if network.supportsSecurity(.wpaEnterprise) { return "WPA Enterprise" }
+        if network.supportsSecurity(.wpaPersonal) { return "WPA Personal" }
+        if network.supportsSecurity(.dynamicWEP) { return "Dynamic WEP" }
+        if network.supportsSecurity(.WEP) { return "WEP" }
+        if network.supportsSecurity(.none) { return "None" }
+        return "Unknown"
+    }
+
+    private func networkAddressing(
+        for interfaceName: String?
+    ) -> (addresses: [String], router: String?) {
+        guard let interfaceName,
+              let store = SCDynamicStoreCreate(
+                nil, "StatusArc.ConnectionDetails" as CFString, nil, nil
+              ) else {
+            return ([], nil)
+        }
+
+        var addresses: [String] = []
+        var router: String?
+
+        for family in ["IPv4", "IPv6"] {
+            let key = "State:/Network/Interface/\(interfaceName)/\(family)"
+            guard let values = SCDynamicStoreCopyValue(store, key as CFString)
+                    as? [String: Any] else {
+                continue
+            }
+
+            addresses.append(contentsOf: values["Addresses"] as? [String] ?? [])
+            if router == nil {
+                router = values["Router"] as? String
+            }
+        }
+
+        return (addresses, router)
     }
 
     private func cleanAndSort(networks: [CWNetwork]) -> [CWNetwork] {

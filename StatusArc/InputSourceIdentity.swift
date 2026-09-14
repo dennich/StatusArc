@@ -121,6 +121,6 @@ enum InputSourceIdentityResolver {
             return String(letters.prefix(2)).uppercased()
         }
 
-        return "--"
+        return "XX"
     }
 }
