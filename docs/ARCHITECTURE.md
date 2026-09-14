@@ -2,6 +2,14 @@
 
 StatusArc is intentionally small and uses native macOS frameworks.
 
+## Native behavior baseline
+
+The corresponding macOS control defines the expected behavior for battery,
+Wi-Fi, and keyboard input features. StatusArc mirrors its observable visuals,
+interaction states, transitions, timing, feedback, edge cases, and response to
+external system-state changes using public APIs. A custom interaction model is
+used only when macOS has no established behavior for the feature.
+
 ## `main.swift`
 
 Starts `NSApplication`, installs `AppDelegate`, and runs as an accessory app.

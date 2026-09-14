@@ -32,6 +32,20 @@ principles:
 - Keep the menu-bar icon readable at normal macOS menu-bar size.
 - Preserve light/dark menu-bar compatibility.
 
+### Native behavior is the specification
+
+For battery, Wi-Fi, and keyboard input controls, use the observable behavior of
+the corresponding macOS control as the product specification. Match the full
+interaction model where public APIs allow it, including clicks, toggles, menu
+structure, enabled and disabled states, transitions, feedback, timing, edge
+cases, and updates caused outside StatusArc.
+
+Do not introduce a custom interaction when macOS already establishes the
+behavior. Use system-reported state and semantic AppKit behavior so StatusArc
+stays synchronized with macOS. If a public API cannot reproduce part of the
+native behavior, document the limitation and keep the closest supported
+behavior consistent across the app.
+
 ## Code style
 
 - Use clear Swift and small focused methods.
@@ -62,6 +76,7 @@ At minimum:
 - Input-source switching still works.
 - Network changes do not crash the app.
 - Any new permission is documented in `PRIVACY.md` and `README.md`.
+- Battery, Wi-Fi, and input interactions have been compared with their macOS equivalents.
 
 ## Pull requests
 

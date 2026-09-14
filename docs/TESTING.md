@@ -3,6 +3,15 @@
 StatusArc interacts with hardware and macOS system services, so the current test
 plan is primarily manual.
 
+## Native behavior parity
+
+For every battery, Wi-Fi, or input-source change, compare StatusArc with the
+corresponding macOS control on the same system. Verify clicks, toggles, menu
+states, disabled states, transitions, feedback, timing, cancellation, errors,
+and permission outcomes. Change the underlying state both inside and outside
+StatusArc and confirm the UI follows macOS without stale or contradictory
+states.
+
 ## Build and launch
 
 - Build the `StatusArc` target.
