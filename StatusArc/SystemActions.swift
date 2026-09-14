@@ -420,6 +420,53 @@ final class SystemActions: NSObject, CLLocationManagerDelegate {
         }
     }
 
+    func keyboardViewerSource() -> TISInputSource? {
+        let properties = [
+            kTISPropertyInputSourceType as String: kTISTypeKeyboardViewer
+        ] as CFDictionary
+
+        guard let unmanaged = TISCreateInputSourceList(properties, true) else {
+            return nil
+        }
+
+        let array = unmanaged.takeRetainedValue() as NSArray
+        let sources = array as? [TISInputSource] ?? []
+
+        return sources.first(where: {
+            InputSourceIdentityResolver.boolProperty(
+                $0,
+                key: kTISPropertyInputSourceIsSelectCapable
+            )
+        })
+    }
+
+    func showKeyboardViewer() throws {
+        guard let source = keyboardViewerSource() else {
+            throw StatusArcActionError.message(
+                "This macOS version does not expose Keyboard Viewer through the public Text Input Source API."
+            )
+        }
+
+        if !InputSourceIdentityResolver.boolProperty(
+            source,
+            key: kTISPropertyInputSourceIsEnabled
+        ) {
+            let enableStatus = TISEnableInputSource(source)
+            guard enableStatus == noErr else {
+                throw StatusArcActionError.message(
+                    "macOS could not enable Keyboard Viewer."
+                )
+            }
+        }
+
+        let selectStatus = TISSelectInputSource(source)
+        guard selectStatus == noErr else {
+            throw StatusArcActionError.message(
+                "macOS could not show Keyboard Viewer."
+            )
+        }
+    }
+
 }
 
 enum StatusArcActionError: LocalizedError {

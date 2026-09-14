@@ -31,17 +31,18 @@ right of the composite icon. A slightly larger vertical
 `powerplug.portrait.fill` appears when external power is connected but charging
 is paused or complete. A low-battery
 warning is represented by the red arc alone. No warning dot is shown. The item
-width is 24 points without an accessory and 34 points with either accessory. Neighboring
-menu-bar items move as it expands or contracts.
+width is 24 points without an accessory, 34 points with the bolt, and 36 points
+with the larger plug. Neighboring menu-bar items move as it expands or contracts.
 Accessory changes use a short shift-and-fade transition, disabled when Reduce
 Motion is enabled. Input-source and network indicators retain their normal semantic colors.
 
 ### Input source — center
 
-The center uses the identity artwork supplied by macOS for the current keyboard
-input source. Menus, the tooltip, and accessibility expose its complete native
-localized name. A standard keyboard symbol is used only when an input source
-does not provide public artwork.
+The center uses a compact label derived from the current Text Input Source's
+public system metadata. It is not restricted to a fixed two-letter country-code
+rule: for example, ABC – Extended appears as `A`, while Ukrainian appears as
+`УК`. Menus, the tooltip, and accessibility use the complete native localized
+source name.
 
 ### Network — bottom indicator
 
@@ -70,13 +71,15 @@ Connectivity, and Input Source submenus.
 - Charging / fully charged state
 - Current power source
 - Time remaining when macOS provides it
+- Current Automatic or Low Power energy-mode state
+- Shortcut to energy details in Activity Monitor
 - Shortcut to Battery Settings
 
 **Network**
-- Wi-Fi on/off
+- Wi-Fi on/off through a native AppKit switch
 - Disconnect from the current Wi-Fi network
 - Scan nearby Wi-Fi networks
-- Group the full scan into known and other networks, with the current network first
+- Show known networks in the Connectivity menu and remaining networks in an Other Networks submenu
 - Join open and personal Wi-Fi networks
 - Use a saved Wi-Fi password from the user keychain when available
 - Join another/unlisted network
@@ -90,6 +93,8 @@ Connectivity, and Input Source submenus.
 - List enabled input sources
 - Switch input source directly
 - Open Emoji & Symbols
+- Open Keyboard Viewer when macOS exposes it through Text Input Source Services
+- Open the keyboard settings that control the system input-source-name item
 - Open Keyboard Settings
 
 **Updates**
@@ -151,14 +156,18 @@ See [PRIVACY.md](PRIVACY.md) for more detail.
 
 ## Known limitations
 
-- Apple does not expose a supported public API for third-party apps to open
-  Keyboard Viewer directly. StatusArc avoids private APIs and fragile
-  Accessibility/UI scripting, so it does not present a menu item that promises
-  this unavailable action.
+- Keyboard Viewer is selectable through Text Input Source Services only on
+  macOS versions that expose its palette source. StatusArc shows the standard
+  item disabled when the current OS does not expose that public source.
 - Apple does not expose a public API that presents or embeds its Battery, Wi-Fi,
   or Input status menus. StatusArc therefore uses standard AppKit submenus for
   the three components. Hidden-network and password prompts use standard
   AppKit controls because CoreWLAN provides the action but no system join UI.
+- Apple does not expose public third-party controls for Charge to Full Now,
+  changing Energy Mode, enumerating significant-energy apps, or toggling Show
+  Input Source Name. StatusArc reports the public state and opens the matching
+  System Settings or Activity Monitor destination instead of presenting a
+  control that cannot perform its labeled action.
 - Enterprise/802.1X Wi-Fi is handed off to macOS Wi-Fi Settings because
   identities, certificates, and managed credentials are better handled by the
   system.

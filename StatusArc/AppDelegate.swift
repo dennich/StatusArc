@@ -2,6 +2,71 @@ import AppKit
 import Carbon
 import CoreWLAN
 
+private final class WiFiMenuControlView: NSView {
+    let toggle = NSSwitch()
+    private let label = NSTextField(labelWithString: "Wi-Fi")
+
+    init() {
+        super.init(frame: NSRect(x: 0, y: 0, width: 280, height: 36))
+
+        label.font = .systemFont(ofSize: NSFont.systemFontSize, weight: .semibold)
+        label.translatesAutoresizingMaskIntoConstraints = false
+        toggle.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(label)
+        addSubview(toggle)
+
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
+            label.centerYAnchor.constraint(equalTo: centerYAnchor),
+            toggle.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
+            toggle.centerYAnchor.constraint(equalTo: centerYAnchor)
+        ])
+    }
+
+    required init?(coder: NSCoder) {
+        nil
+    }
+
+    func update(isOn: Bool, isEnabled: Bool, status: String? = nil) {
+        toggle.state = isOn ? .on : .off
+        toggle.isEnabled = isEnabled
+        label.stringValue = status.map { "Wi-Fi — \($0)" } ?? "Wi-Fi"
+        label.textColor = isEnabled ? .labelColor : .secondaryLabelColor
+    }
+}
+
+private final class BatterySummaryMenuView: NSView {
+    private let titleLabel = NSTextField(labelWithString: "Battery")
+    private let percentageLabel = NSTextField(labelWithString: "—")
+
+    init() {
+        super.init(frame: NSRect(x: 0, y: 0, width: 280, height: 32))
+
+        titleLabel.font = .systemFont(ofSize: NSFont.systemFontSize, weight: .semibold)
+        percentageLabel.font = .systemFont(ofSize: NSFont.systemFontSize)
+        percentageLabel.textColor = .secondaryLabelColor
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        percentageLabel.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(titleLabel)
+        addSubview(percentageLabel)
+
+        NSLayoutConstraint.activate([
+            titleLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
+            titleLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
+            percentageLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
+            percentageLabel.centerYAnchor.constraint(equalTo: centerYAnchor)
+        ])
+    }
+
+    required init?(coder: NSCoder) {
+        nil
+    }
+
+    func update(percentage: Int?) {
+        percentageLabel.stringValue = percentage.map { "\($0)%" } ?? "—"
+    }
+}
+
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemValidation {
     private enum WiFiOperation: Equatable {
         case idle
@@ -27,21 +92,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
 
     private let batteryMenuItem = NSMenuItem(title: "Battery", action: nil, keyEquivalent: "")
     private let batteryMenu = NSMenu(title: "Battery")
+    private let batterySummaryItem = NSMenuItem()
+    private let batterySummaryView = BatterySummaryMenuView()
     private let batteryItem = NSMenuItem(title: "Battery", action: nil, keyEquivalent: "")
     private let batteryPowerItem = NSMenuItem(title: "Power Source", action: nil, keyEquivalent: "")
+    private let automaticEnergyModeItem = NSMenuItem(title: "Automatic", action: nil, keyEquivalent: "")
+    private let lowPowerEnergyModeItem = NSMenuItem(title: "Low Power", action: nil, keyEquivalent: "")
+    private let highPowerEnergyModeItem = NSMenuItem(title: "High Power", action: nil, keyEquivalent: "")
 
     private let connectivityMenuItem = NSMenuItem(title: "Connectivity", action: nil, keyEquivalent: "")
     private let connectivityMenu = NSMenu(title: "Connectivity")
     private let networkItem = NSMenuItem(title: "Network", action: nil, keyEquivalent: "")
     private let wifiToggleItem = NSMenuItem(title: "Wi-Fi", action: nil, keyEquivalent: "")
+    private let wifiControlView = WiFiMenuControlView()
     private let disconnectWiFiItem = NSMenuItem(title: "Disconnect Wi-Fi", action: nil, keyEquivalent: "")
-    private let wifiNetworksItem = NSMenuItem(title: "Wi-Fi Networks", action: nil, keyEquivalent: "")
-    private let wifiNetworksMenu = NSMenu(title: "Wi-Fi Networks")
+    private let wifiNetworksItem = NSMenuItem(title: "Other Networks", action: nil, keyEquivalent: "")
+    private let wifiNetworksMenu = NSMenu(title: "Other Networks")
     private let wifiDetailsItem = NSMenuItem(title: "Connection Details", action: nil, keyEquivalent: "")
     private let wifiDetailsMenu = NSMenu(title: "Connection Details")
 
     private let inputItem = NSMenuItem(title: "Input Source", action: nil, keyEquivalent: "")
     private let inputSourcesMenu = NSMenu(title: "Input Sources")
+    private let keyboardViewerItem = NSMenuItem(title: "Show Keyboard Viewer", action: nil, keyEquivalent: "")
 
     private let versionItem = NSMenuItem(title: "StatusArc", action: nil, keyEquivalent: "")
     private let checkForUpdatesItem = NSMenuItem(title: "Check for Updates…", action: nil, keyEquivalent: "")
@@ -114,12 +186,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         versionItem.isEnabled = false
 
         // Apple does not expose its Control Center panels to third-party apps.
-        // Standard AppKit submenus preserve native menu behavior without
-        // reproducing those private panels as custom views.
+        // Standard AppKit submenus preserve native menu behavior. Small
+        // standard AppKit views provide the public controls macOS exposes.
         batteryMenuItem.submenu = batteryMenu
+        batterySummaryItem.view = batterySummaryView
+        batteryMenu.addItem(batterySummaryItem)
         batteryMenu.addItem(batteryItem)
         batteryMenu.addItem(batteryPowerItem)
         batteryMenu.addItem(.separator())
+        batteryMenu.addItem(sectionItem("Energy Mode"))
+        for item in [
+            automaticEnergyModeItem,
+            lowPowerEnergyModeItem,
+            highPowerEnergyModeItem
+        ] {
+            item.isEnabled = false
+            item.toolTip = "macOS does not expose a public API for changing Energy Mode."
+            batteryMenu.addItem(item)
+        }
+        batteryMenu.addItem(.separator())
+        batteryMenu.addItem(actionItem(
+            "Energy Usage in Activity Monitor…",
+            #selector(openActivityMonitor)
+        ))
         batteryMenu.addItem(actionItem(
             "Battery Settings…",
             #selector(openBatterySettings)
@@ -127,28 +216,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         menu.addItem(batteryMenuItem)
 
         connectivityMenuItem.submenu = connectivityMenu
-        connectivityMenu.addItem(networkItem)
-        connectivityMenu.addItem(.separator())
-
-        wifiToggleItem.target = self
-        wifiToggleItem.action = #selector(toggleWiFi)
-        connectivityMenu.addItem(wifiToggleItem)
+        wifiToggleItem.view = wifiControlView
+        wifiControlView.toggle.target = self
+        wifiControlView.toggle.action = #selector(wifiSwitchChanged(_:))
 
         disconnectWiFiItem.target = self
         disconnectWiFiItem.action = #selector(disconnectWiFi)
-        connectivityMenu.addItem(disconnectWiFiItem)
 
         wifiNetworksItem.submenu = wifiNetworksMenu
-        connectivityMenu.addItem(wifiNetworksItem)
 
         wifiDetailsItem.submenu = wifiDetailsMenu
-        connectivityMenu.addItem(wifiDetailsItem)
-
-        connectivityMenu.addItem(.separator())
-        connectivityMenu.addItem(actionItem(
-            "Network Settings…",
-            #selector(openNetworkSettings)
-        ))
+        rebuildWiFiNetworksMenu(using: actions.cachedWiFiNetworks())
         menu.addItem(connectivityMenuItem)
 
         inputItem.submenu = inputSourcesMenu
@@ -312,13 +390,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
                 stateText += " • Low Power Mode"
             }
 
-            batteryItem.title = "Battery: \(percent)% • \(stateText)"
+            batteryItem.title = stateText
             batteryPowerItem.title = "Power Source: \(battery.powerSource)"
             batteryMenuItem.title = "Battery: \(percent)%"
+            batterySummaryView.update(percentage: percent)
+            automaticEnergyModeItem.state = battery.isLowPowerModeEnabled ? .off : .on
+            lowPowerEnergyModeItem.state = battery.isLowPowerModeEnabled ? .on : .off
+            highPowerEnergyModeItem.state = .off
         } else {
             batteryItem.title = "Battery: Not available"
             batteryPowerItem.title = "Power Source: —"
             batteryMenuItem.title = "Battery"
+            batterySummaryView.update(percentage: nil)
+            automaticEnergyModeItem.state = .off
+            lowPowerEnergyModeItem.state = .off
+            highPowerEnergyModeItem.state = .off
         }
     }
 
@@ -386,15 +472,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
 
         switch wifiOperation {
         case .changingPower(true):
-            wifiToggleItem.title = "Wi-Fi: Turning On…"
+            wifiControlView.update(isOn: true, isEnabled: false, status: "Turning On…")
         case .changingPower(false):
-            wifiToggleItem.title = "Wi-Fi: Turning Off…"
+            wifiControlView.update(isOn: false, isEnabled: false, status: "Turning Off…")
         default:
-            wifiToggleItem.title = actions.wifiPowerOn
-                ? "Turn Wi-Fi Off"
-                : "Turn Wi-Fi On"
+            wifiControlView.update(
+                isOn: actions.wifiPowerOn,
+                isEnabled: wifiOperation == .idle
+            )
         }
-        wifiToggleItem.state = .off
         wifiToggleItem.isEnabled = wifiOperation == .idle
 
         let hasWiFiAssociation = actions.wifiPowerOn
@@ -441,9 +527,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
 
     // MARK: - Wi-Fi controls
 
-    @objc private func toggleWiFi() {
+    @objc private func wifiSwitchChanged(_ sender: NSSwitch) {
         guard wifiOperation == .idle else { return }
-        let enabled = !actions.wifiPowerOn
+        let enabled = sender.state == .on
         wifiOperation = .changingPower(enabled: enabled)
         refresh()
 
@@ -489,40 +575,75 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         }
     }
 
-    private func addWiFiNetworkSections() {
+    private func addKnownWiFiNetworkItems(to menu: NSMenu) {
         let currentSSID = actions.currentSSID
         let knownNames = actions.knownWiFiNetworkNames()
         let indexed = scannedNetworks.enumerated().compactMap { index, network in
             network.ssid.map { (index: index, network: network, ssid: $0) }
         }
 
-        if let current = indexed.first(where: { $0.ssid == currentSSID }) {
-            wifiNetworksMenu.addItem(networkItem(for: current, isCurrent: true))
-            wifiNetworksMenu.addItem(.separator())
-        }
-
         let known = indexed.filter {
-            knownNames.contains($0.ssid) && $0.ssid != currentSSID
-        }
-        if !known.isEmpty {
-            wifiNetworksMenu.addItem(sectionItem("Known Networks"))
-            known.forEach {
-                wifiNetworksMenu.addItem(networkItem(for: $0, isCurrent: false))
-            }
+            knownNames.contains($0.ssid) || $0.ssid == currentSSID
         }
 
-        let other = indexed.filter {
-            !knownNames.contains($0.ssid) && $0.ssid != currentSSID
+        guard !known.isEmpty || currentSSID != nil else {
+            return
         }
-        if !other.isEmpty {
-            if !known.isEmpty {
-                wifiNetworksMenu.addItem(.separator())
-            }
-            wifiNetworksMenu.addItem(sectionItem("Other Networks"))
-            other.forEach {
-                wifiNetworksMenu.addItem(networkItem(for: $0, isCurrent: false))
-            }
+
+        menu.addItem(sectionItem("Known Networks"))
+
+        if let currentSSID,
+           !known.contains(where: { $0.ssid == currentSSID }) {
+            let currentItem = NSMenuItem(
+                title: currentSSID,
+                action: nil,
+                keyEquivalent: ""
+            )
+            currentItem.state = .on
+            currentItem.isEnabled = false
+            menu.addItem(currentItem)
         }
+
+        for entry in known.sorted(by: {
+            if $0.ssid == currentSSID { return true }
+            if $1.ssid == currentSSID { return false }
+            return $0.ssid.localizedStandardCompare($1.ssid) == .orderedAscending
+        }) {
+            menu.addItem(networkItem(
+                for: entry,
+                isCurrent: entry.ssid == currentSSID
+            ))
+        }
+    }
+
+    private func rebuildConnectivityMenu() {
+        connectivityMenu.removeAllItems()
+        connectivityMenu.addItem(wifiToggleItem)
+        connectivityMenu.addItem(networkItem)
+        connectivityMenu.addItem(.separator())
+
+        if actions.wifiPowerOn {
+            addKnownWiFiNetworkItems(to: connectivityMenu)
+
+            if connectivityMenu.items.last?.isSeparatorItem == false,
+               connectivityMenu.items.last !== networkItem {
+                connectivityMenu.addItem(.separator())
+            }
+
+            connectivityMenu.addItem(wifiNetworksItem)
+            connectivityMenu.addItem(disconnectWiFiItem)
+            connectivityMenu.addItem(wifiDetailsItem)
+        }
+
+        connectivityMenu.addItem(.separator())
+        connectivityMenu.addItem(actionItem(
+            "Network Settings…",
+            #selector(openNetworkSettings)
+        ))
+        connectivityMenu.addItem(actionItem(
+            "Wi-Fi Settings…",
+            #selector(openWiFiSettings)
+        ))
     }
 
     private func networkItem(
@@ -575,6 +696,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
             let item = NSMenuItem(title: "Wi-Fi is off", action: nil, keyEquivalent: "")
             item.isEnabled = false
             wifiNetworksMenu.addItem(item)
+            rebuildConnectivityMenu()
             return
         }
 
@@ -613,7 +735,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
 
             wifiNetworksMenu.addItem(empty)
         } else {
-            addWiFiNetworkSections()
+            let currentSSID = actions.currentSSID
+            let knownNames = actions.knownWiFiNetworkNames()
+            let other: [(index: Int, network: CWNetwork, ssid: String)] =
+                scannedNetworks.enumerated().compactMap { index, network in
+                guard let ssid = network.ssid,
+                      ssid != currentSSID,
+                      !knownNames.contains(ssid) else {
+                    return nil
+                }
+                return (index: index, network: network, ssid: ssid)
+            }
+
+            if other.isEmpty {
+                let empty = NSMenuItem(
+                    title: "No Other Networks Found",
+                    action: nil,
+                    keyEquivalent: ""
+                )
+                empty.isEnabled = false
+                wifiNetworksMenu.addItem(empty)
+            } else {
+                other.forEach {
+                    wifiNetworksMenu.addItem(networkItem(for: $0, isCurrent: false))
+                }
+            }
         }
 
         wifiNetworksMenu.addItem(.separator())
@@ -651,6 +797,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
             privacy.target = self
             wifiNetworksMenu.addItem(privacy)
         }
+
+        rebuildConnectivityMenu()
     }
 
     @objc private func scanNetworksWithPermission() {
@@ -875,10 +1023,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
                 item.state = .on
             }
 
-            if let icon = identity.icon?.copy() as? NSImage {
-                icon.size = NSSize(width: 16, height: 16)
-                item.image = icon
-            }
+            item.image = inputSourceMenuImage(label: identity.compactLabel)
 
             inputSourcesMenu.addItem(item)
         }
@@ -894,14 +1039,68 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         }
 
         inputSourcesMenu.addItem(.separator())
-        inputSourcesMenu.addItem(actionItem(
-            "Emoji & Symbols…",
+        let emojiItem = actionItem(
+            "Show Emoji & Symbols",
             #selector(showEmojiAndSymbols)
+        )
+        emojiItem.image = NSImage(
+            systemSymbolName: "character.book.closed",
+            accessibilityDescription: nil
+        )
+        inputSourcesMenu.addItem(emojiItem)
+
+        keyboardViewerItem.target = self
+        keyboardViewerItem.action = #selector(showKeyboardViewer)
+        keyboardViewerItem.image = NSImage(
+            systemSymbolName: "keyboard",
+            accessibilityDescription: nil
+        )
+        keyboardViewerItem.isEnabled = actions.keyboardViewerSource() != nil
+        keyboardViewerItem.toolTip = keyboardViewerItem.isEnabled
+            ? nil
+            : "Keyboard Viewer is not exposed through the public API on this macOS version."
+        inputSourcesMenu.addItem(keyboardViewerItem)
+
+        inputSourcesMenu.addItem(.separator())
+        inputSourcesMenu.addItem(actionItem(
+            "Input Source Name in Menu Bar…",
+            #selector(openKeyboardSettings)
         ))
+        inputSourcesMenu.addItem(.separator())
         inputSourcesMenu.addItem(actionItem(
             "Keyboard Settings…",
             #selector(openKeyboardSettings)
         ))
+    }
+
+    private func inputSourceMenuImage(label: String) -> NSImage {
+        let size = NSSize(width: 26, height: 18)
+        let image = NSImage(size: size, flipped: false) { rect in
+            NSColor.labelColor.withAlphaComponent(0.14).setFill()
+            NSBezierPath(
+                roundedRect: rect.insetBy(dx: 1, dy: 1),
+                xRadius: 4,
+                yRadius: 4
+            ).fill()
+
+            let paragraph = NSMutableParagraphStyle()
+            paragraph.alignment = .center
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: NSFont.systemFont(
+                    ofSize: label.count == 1 ? 12 : 10,
+                    weight: .semibold
+                ),
+                .foregroundColor: NSColor.labelColor,
+                .paragraphStyle: paragraph
+            ]
+            (label as NSString).draw(
+                in: NSRect(x: 1, y: 2, width: size.width - 2, height: 14),
+                withAttributes: attributes
+            )
+            return true
+        }
+        image.isTemplate = false
+        return image
     }
 
     @objc private func selectInputSource(_ sender: NSMenuItem) {
@@ -920,6 +1119,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     @objc private func showEmojiAndSymbols() {
         NSApp.activate(ignoringOtherApps: true)
         NSApp.orderFrontCharacterPalette(nil)
+    }
+
+    @objc private func showKeyboardViewer() {
+        do {
+            try actions.showKeyboardViewer()
+        } catch {
+            showError(error, title: "Couldn’t Show Keyboard Viewer")
+        }
     }
 
     // MARK: - System destinations
@@ -946,6 +1153,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         openSettings(
             deepLink: "x-apple.systempreferences:com.apple.Battery-Settings.extension"
         )
+    }
+
+    @objc private func openActivityMonitor() {
+        let path = "/System/Applications/Utilities/Activity Monitor.app"
+        let url = URL(fileURLWithPath: path)
+
+        if FileManager.default.fileExists(atPath: path) {
+            NSWorkspace.shared.open(url)
+        }
     }
 
     @objc private func openLocationPrivacySettings() {

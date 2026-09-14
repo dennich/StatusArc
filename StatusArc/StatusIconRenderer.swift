@@ -9,6 +9,14 @@ final class StatusIconRenderer {
         case none, bolt, plug
     }
 
+    private static func accessoryExtent(for state: AccessoryState) -> CGFloat {
+        switch state {
+        case .none: return 0
+        case .bolt: return 10
+        case .plug: return 12
+        }
+    }
+
     static func accessoryState(for battery: BatteryStatus?) -> AccessoryState {
         guard let battery else { return .none }
         switch battery.powerState {
@@ -35,8 +43,12 @@ final class StatusIconRenderer {
         let oldWidth = previousAccessory?.size.width ?? 0
         let newWidth = accessory?.size.width ?? 0
         let accessoryWidth = oldWidth + (newWidth - oldWidth) * progress
-        let oldExtent: CGFloat = previousAccessory == nil ? 0 : 10
-        let newExtent: CGFloat = accessory == nil ? 0 : 10
+        let oldExtent = Self.accessoryExtent(
+            for: Self.accessoryState(for: (previousSnapshot ?? snapshot).battery)
+        )
+        let newExtent = Self.accessoryExtent(
+            for: Self.accessoryState(for: snapshot.battery)
+        )
         let imageSize = NSSize(
             width: Self.baseItemWidth + oldExtent + (newExtent - oldExtent) * progress,
             height: Self.imageHeight
@@ -75,8 +87,8 @@ final class StatusIconRenderer {
                 differentiateWithoutColor: differentiateWithoutColor
             )
 
-            self.drawInputSource(
-                snapshot.inputSourceIcon,
+            self.drawInputSourceLabel(
+                snapshot.inputSourceLabel,
                 in: compositeRect,
                 color: bright
             )
@@ -210,11 +222,10 @@ final class StatusIconRenderer {
                 ? "powerplug.fill"
                 : "powerplug.portrait.fill"
             pointSize = 11.5
-            // Seven points is the remaining visible width in the 34-point item.
-            // Extra height and weight make the portrait plug visually balance
-            // the bolt without clipping it or moving it toward the arc.
-            maximumSize = NSSize(width: 7, height: 12.5)
-            weight = .medium
+            // The plug receives two extra item-width points so it can grow
+            // without clipping or moving toward the arc.
+            maximumSize = NSSize(width: 9, height: 13)
+            weight = .semibold
         }
 
         let configuration = NSImage.SymbolConfiguration(pointSize: pointSize, weight: weight)
@@ -231,50 +242,33 @@ final class StatusIconRenderer {
         return symbol
     }
 
-    private func drawInputSource(
-        _ inputSourceIcon: NSImage?,
+    private func drawInputSourceLabel(
+        _ label: String,
         in rect: NSRect,
         color: NSColor
     ) {
-        let sourceImage: NSImage
-        if let inputSourceIcon {
-            sourceImage = inputSourceIcon
-        } else {
-            let configuration = NSImage.SymbolConfiguration(pointSize: 9, weight: .medium)
-                .applying(.init(paletteColors: [color]))
-            guard let fallback = NSImage(
-                systemSymbolName: "keyboard",
-                accessibilityDescription: nil
-            )?.withSymbolConfiguration(configuration) else {
-                return
-            }
-            sourceImage = fallback
-        }
+        let font = NSFont.monospacedSystemFont(
+            ofSize: label.count == 1 ? 9 : 8.2,
+            weight: .semibold
+        )
 
-        guard sourceImage.size.width > 0, sourceImage.size.height > 0 else {
-            return
-        }
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.alignment = .center
 
-        let maximumSize = NSSize(width: 12, height: 9.5)
-        let scale = min(
-            maximumSize.width / sourceImage.size.width,
-            maximumSize.height / sourceImage.size.height
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: color,
+            .paragraphStyle: paragraph
+        ]
+
+        let textRect = NSRect(
+            x: rect.minX + 4,
+            y: 6.1,
+            width: rect.width - 8,
+            height: 10
         )
-        let imageSize = NSSize(
-            width: sourceImage.size.width * scale,
-            height: sourceImage.size.height * scale
-        )
-        sourceImage.draw(
-            in: NSRect(
-                x: rect.midX - imageSize.width / 2,
-                y: 6.35,
-                width: imageSize.width,
-                height: imageSize.height
-            ),
-            from: .zero,
-            operation: .sourceOver,
-            fraction: 1
-        )
+
+        (label as NSString).draw(in: textRect, withAttributes: attributes)
     }
 
     private func drawNetworkIndicator(

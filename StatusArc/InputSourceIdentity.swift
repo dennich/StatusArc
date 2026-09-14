@@ -3,7 +3,7 @@ import Carbon
 
 struct InputSourceIdentity {
     let localizedName: String
-    let icon: NSImage?
+    let compactLabel: String
 }
 
 enum InputSourceIdentityResolver {
@@ -13,7 +13,10 @@ enum InputSourceIdentityResolver {
 
         return InputSourceIdentity(
             localizedName: localizedName,
-            icon: icon(for: source)
+            compactLabel: compactLabel(
+                for: source,
+                localizedName: localizedName
+            )
         )
     }
 
@@ -38,24 +41,47 @@ enum InputSourceIdentityResolver {
         return CFBooleanGetValue(value)
     }
 
-    private static func icon(for source: TISInputSource) -> NSImage? {
-        if let pointer = TISGetInputSourceProperty(source, kTISPropertyIconImageURL) {
-            let iconURL = Unmanaged<CFURL>
-                .fromOpaque(pointer)
-                .takeUnretainedValue() as URL
-            if let image = NSImage(contentsOf: iconURL) {
-                return image
+    private static func arrayProperty(
+        _ source: TISInputSource,
+        key: CFString
+    ) -> [String]? {
+        guard let pointer = TISGetInputSourceProperty(source, key) else {
+            return nil
+        }
+
+        return Unmanaged<CFArray>
+            .fromOpaque(pointer)
+            .takeUnretainedValue() as? [String]
+    }
+
+    private static func compactLabel(
+        for source: TISInputSource,
+        localizedName: String
+    ) -> String {
+        if boolProperty(source, key: kTISPropertyInputSourceIsASCIICapable),
+           let firstLetter = localizedName.first(where: \.isLetter) {
+            return String(firstLetter).uppercased()
+        }
+
+        if let language = arrayProperty(
+            source,
+            key: kTISPropertyInputSourceLanguages
+        )?.first {
+            let languageCode = language
+                .split(whereSeparator: { $0 == "-" || $0 == "_" })
+                .first
+                .map(String.init) ?? language
+            let languageLocale = Locale(identifier: languageCode)
+            let nativeName = languageLocale.localizedString(
+                forLanguageCode: languageCode
+            ) ?? localizedName
+            let letters = nativeName.filter(\.isLetter)
+            if !letters.isEmpty {
+                return String(letters.prefix(2)).uppercased(with: languageLocale)
             }
         }
 
-        // Some built-in keyboard layouts expose their public legacy IconRef but
-        // no image URL. This documented fallback preserves the same identity
-        // artwork macOS associates with that input source.
-        if let pointer = TISGetInputSourceProperty(source, kTISPropertyIconRef) {
-            let iconRef = unsafeBitCast(pointer, to: IconRef.self)
-            return NSImage(iconRef: iconRef)
-        }
-
-        return nil
+        let letters = localizedName.filter(\.isLetter)
+        return letters.first.map { String($0).uppercased() } ?? "⌨"
     }
 }

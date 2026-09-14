@@ -23,6 +23,12 @@ and Input Source. Their content must follow the corresponding system menus. Any
 bespoke menu surface requires a documented reason that a native menu or action
 is insufficient.
 
+The public menu API also does not expose Control Center's custom header rows.
+StatusArc uses small AppKit menu-item views only where an actual native control
+is available: a battery summary header and an `NSSwitch` backed by CoreWLAN for
+Wi-Fi power. Other rows remain standard `NSMenuItem` objects so keyboard and
+accessibility behavior stay native.
+
 The public menu API also does not expose Apple's embedded Wi-Fi toggle row or
 the trailing details button from the system status menu. On macOS 13, StatusArc
 uses standard command items (`Turn Wi-Fi On` / `Turn Wi-Fi Off`) and exposes
@@ -62,10 +68,10 @@ Reads passive system state:
 - Internet-path availability through Network.framework;
 - current keyboard input source through Text Input Source Services.
 
-The input source snapshot includes its complete native localized name and the
-public identity artwork supplied by Text Input Source Services. Some built-in
-layouts expose only the documented legacy IconRef, so the renderer supports
-that compatibility fallback as well as the preferred image URL.
+The input source snapshot includes its complete native localized name and a
+compact label derived from the source's public name, language, and ASCII-capable
+properties. Apple does not expose the compact badge used by its own Input menu;
+StatusArc therefore does not consume the unrelated legacy IconRef artwork.
 
 It returns a `StatusSnapshot` used by both the renderer and menu.
 
@@ -86,7 +92,7 @@ privacy impact easier to review.
 Draws the fixed-size menu-bar image using AppKit/Core Graphics:
 
 - battery arc;
-- native input-source identity artwork;
+- compact input-source label derived from native metadata;
 - Wi-Fi dots or Ethernet line.
 
 The image is not marked as a template image because the battery arc needs

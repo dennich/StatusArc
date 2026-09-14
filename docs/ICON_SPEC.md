@@ -36,15 +36,15 @@ the state never depends on red or yellow alone. The arc radius does not change.
 
 ## 2. Input source — center
 
-Use the identity artwork macOS exposes for the active Text Input Source. Prefer
-`kTISPropertyIconImageURL`; use the source's public legacy IconRef when built-in
-layouts expose no image URL. Draw a standard keyboard symbol only when neither
-property supplies artwork.
+Use a compact label derived from public Text Input Source metadata. ASCII input
+sources use the first letter of their localized system name. Other sources use
+up to two letters from the language's native name, so Ukrainian appears as `УК`
+rather than a custom country code. The label is variable-length and is not
+governed by an exactly-two-letters rule.
 
 The menu, tooltip, and accessibility value use the complete localized system
-source name from `kTISPropertyLocalizedName`. Do not invent a language or
-country abbreviation. Keep the artwork aspect-fitted, visually centered, and
-readable at normal menu-bar size.
+source name from `kTISPropertyLocalizedName`. Keep the compact label visually
+centered and readable at normal menu-bar size.
 
 ## 3. Network — bottom
 
@@ -82,11 +82,11 @@ original 30 × 22-point composite geometry, 11.1-point arc radius, and existing
 internal spacing. Trim the original transparent left inset and unused outer padding:
 
 - No accessory: 24-point image and item width.
-- Charging bolt or external-power plug: 34-point image and item width. Keep the
-  bolt within its original 8 × 12-point bounds. Fit the vertical plug within
-  the seven-point visible accessory width and use slightly greater height and
-  weight so it balances the bolt. Preserve each symbol's
-  aspect ratio and its gap to the arc.
+- Charging bolt: 34-point image and item width. Keep the bolt within its
+  original 8 × 12-point bounds.
+- External-power plug: 36-point image and item width. Fit the vertical plug
+  within 9 × 13 points and use semibold weight so it balances the bolt.
+  Preserve each symbol's aspect ratio and its gap to the arc.
 
 The image and native item widths change together during the 180 ms transition.
 The accessory fades at the expanding or contracting edge. Icon artwork is never

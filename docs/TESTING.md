@@ -60,7 +60,10 @@ menu label rather than claiming active charging.
 - Confirm language and network colors remain independent of battery colors.
 - Check 0%, 100%, unavailable battery, and fully charged snapshots.
 - Check both light and dark appearances at normal size and Retina scale.
-- Switch repeatedly between no accessory and bolt: image and item widths must match at 24 and 34 points respectively, with a constant 22-point image height. A low-battery warning alone must not add a dot or widen the item. Neighboring items should move with expansion/contraction.
+- Switch repeatedly among no accessory, bolt, and plug: image and item widths
+  must match 24, 34, and 36 points respectively, with a constant 22-point image
+  height. A low-battery warning alone must not add a dot or widen the item.
+  Neighboring items should move with expansion/contraction.
 - Confirm icon sizes and internal spacing remain unchanged in every settled state and throughout resizing; check that no automatic image scaling squeezes the artwork.
 - Confirm accessories stay outside the arc, remain vertically centered, and never pulse.
 - Confirm bolt appearance and disappearance use one short, smooth shift/fade; unchanged state must not restart the animation.
@@ -104,19 +107,26 @@ menu label rather than claiming active charging.
 
 - Configure at least two input sources in macOS.
 - Switch them using StatusArc.
-- Confirm the center identity artwork updates to match the current macOS input source.
-- Confirm StatusArc does not substitute a custom two-letter language or country code.
-- Configure two sources for the same language and confirm their native artwork remains distinguishable when macOS supplies distinct artwork.
+- Confirm the center label updates to match the current macOS input source.
+- Confirm ASCII sources use a compact system-name label and non-ASCII sources
+  use the native language name rather than a fixed country-code mapping.
 - Confirm each submenu item, the parent item, tooltip, and accessibility value use the source's full localized system name.
 - Switch using the macOS keyboard shortcut and confirm StatusArc follows.
 - Open Emoji & Symbols.
-- Open Keyboard Settings.
+- Confirm Keyboard Viewer opens when Text Input Source Services exposes it and
+  appears disabled otherwise.
+- Open the input-source-name and Keyboard Settings destinations.
 
 ## Menu structure
 
 - Confirm the root menu exposes Battery, Connectivity, and Input Source as three
   standard keyboard-navigable submenus.
 - Compare the content and enabled states with the corresponding macOS menus.
+- Confirm Connectivity contains a working `NSSwitch`, known networks, an Other
+  Networks submenu, and Network and Wi-Fi Settings destinations.
+- Confirm Battery shows its percentage, power state, power source, and the
+  current public Energy Mode state. Confirm read-only Energy Mode choices are
+  disabled rather than pretending to change protected system state.
 - Confirm Battery Settings, Network Settings, Keyboard Settings, Emoji &
   Symbols, and Wireless Diagnostics invoke the available public system actions.
 - Confirm no custom view attempts to reproduce a Control Center panel.
