@@ -46,6 +46,20 @@ stays synchronized with macOS. If a public API cannot reproduce part of the
 native behavior, document the limitation and keep the closest supported
 behavior consistent across the app.
 
+### Use system menus and actions first
+
+Before adding a menu or interaction, check whether macOS or a public framework
+already provides the menu, action, or destination. Invoke that system-provided
+behavior when it can complete the task. Prefer standard AppKit components such
+as `NSMenu` and `NSMenuItem` when StatusArc must provide its own menu content;
+do not draw a custom menu surface that duplicates their behavior.
+
+Create custom menu content only when no public API can present or embed the
+corresponding system menu, or when the system menu cannot support StatusArc's
+combined status workflow. Document that reason with the implementation and use
+native controls, enabled states, keyboard behavior, accessibility, and timing
+inside the fallback.
+
 ## Code style
 
 - Use clear Swift and small focused methods.

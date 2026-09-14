@@ -10,6 +10,19 @@ interaction states, transitions, timing, feedback, edge cases, and response to
 external system-state changes using public APIs. A custom interaction model is
 used only when macOS has no established behavior for the feature.
 
+## Menu integration policy
+
+StatusArc invokes public system actions and destinations instead of recreating
+them. Examples include the Character Palette, System Settings panes, and
+Wireless Diagnostics.
+
+macOS does not provide a public API for a third-party app to present, embed, or
+combine Apple's Battery, Wi-Fi, and Input status menus. StatusArc therefore uses
+the standard AppKit `NSMenu` and `NSMenuItem` implementation for its combined
+menu. Its content must follow the corresponding system menus, and any bespoke
+menu surface requires a documented reason that a native menu or action is
+insufficient.
+
 ## `main.swift`
 
 Starts `NSApplication`, installs `AppDelegate`, and runs as an accessory app.

@@ -30,9 +30,14 @@ battery state. Keep the rendered image non-template to preserve these colors.
 
 ## 2. Input source — center
 
-Display a concise two-letter code for the active input source.
+Display exactly two letters for the active input source. The code represents
+the specific source where possible, rather than only its language, so layouts
+that share a language remain distinguishable.
 
-Examples: `EN`, `UA`, `DE`.
+Examples include `US`, `GB`, `DV`, `UA`, and `DE`. Prefer a region or a stable
+layout abbreviation from the system input-source identity, then fall back to
+the two-letter language code. Resolve collisions deterministically. The menu,
+tooltip, and accessibility value use the complete localized system source name.
 
 Ukrainian is intentionally displayed as `UA` for this project's UI convention.
 

@@ -12,6 +12,10 @@ and permission outcomes. Change the underlying state both inside and outside
 StatusArc and confirm the UI follows macOS without stale or contradictory
 states.
 
+For every custom menu or dialog, record why a public system menu or action
+cannot perform the task. Confirm the fallback uses standard AppKit menu and
+control behavior, keyboard navigation, accessibility, and enabled states.
+
 ## Build and launch
 
 - Build the `StatusArc` target.
@@ -84,6 +88,9 @@ states.
 - Configure at least two input sources in macOS.
 - Switch them using StatusArc.
 - Confirm the center code updates.
+- Confirm every center code contains exactly two letters.
+- Configure two sources for the same language and confirm their codes remain distinguishable.
+- Confirm the menu and accessibility value use each source's full localized system name.
 - Switch using the macOS keyboard shortcut and confirm StatusArc follows.
 - Open Emoji & Symbols.
 - Open Keyboard Settings.
