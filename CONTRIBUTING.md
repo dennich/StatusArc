@@ -74,7 +74,7 @@ formatting consistent with the existing source.
 
 ## Icon semantics
 
-Changes to battery thresholds, colors, network dots/line, or language-code
+Changes to battery thresholds, colors, network dots/line, or input-source identity
 behavior should also update `docs/ICON_SPEC.md`.
 
 ## Testing

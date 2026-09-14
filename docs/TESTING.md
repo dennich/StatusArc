@@ -51,6 +51,9 @@ Also confirm that external power with charging paused, charging complete, or
 the battery otherwise not charging shows the plug accessory and an accurate
 menu label rather than claiming active charging.
 
+- Confirm the plug is vertical, slightly larger than before, and has comparable
+  visual weight to the bolt without changing the arc radius or accessory gap.
+
 - Check that percentage alone never triggers a warning: 25.49% displays 25%, 25.50% displays 26%, and neither is urgent without a system warning. Also check 0% and 10% with no warning.
 - Confirm early/final macOS warnings show a red arc without a dot, including with Low Power Mode enabled.
 - Confirm the unused arc is dim neutral, dim red, or dim yellow to match its state.
@@ -101,13 +104,22 @@ menu label rather than claiming active charging.
 
 - Configure at least two input sources in macOS.
 - Switch them using StatusArc.
-- Confirm the center code updates.
-- Confirm every center code contains exactly two letters.
-- Configure two sources for the same language and confirm their codes remain distinguishable.
-- Confirm the menu and accessibility value use each source's full localized system name.
+- Confirm the center identity artwork updates to match the current macOS input source.
+- Confirm StatusArc does not substitute a custom two-letter language or country code.
+- Configure two sources for the same language and confirm their native artwork remains distinguishable when macOS supplies distinct artwork.
+- Confirm each submenu item, the parent item, tooltip, and accessibility value use the source's full localized system name.
 - Switch using the macOS keyboard shortcut and confirm StatusArc follows.
 - Open Emoji & Symbols.
 - Open Keyboard Settings.
+
+## Menu structure
+
+- Confirm the root menu exposes Battery, Connectivity, and Input Source as three
+  standard keyboard-navigable submenus.
+- Compare the content and enabled states with the corresponding macOS menus.
+- Confirm Battery Settings, Network Settings, Keyboard Settings, Emoji &
+  Symbols, and Wireless Diagnostics invoke the available public system actions.
+- Confirm no custom view attempts to reproduce a Control Center panel.
 
 ## Settings shortcuts
 

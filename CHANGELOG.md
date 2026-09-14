@@ -7,8 +7,9 @@ All notable user-visible changes to StatusArc are documented here.
 ### Changed
 - Wi-Fi joins now check only the user keychain for saved passwords. If none is available, StatusArc asks for the password without requesting administrator access to the System keychain.
 - Battery, network, and input-source changes now refresh from macOS events, with a low-frequency recovery refresh, instead of waiting for one-second polling.
-- External power that is paused, complete, or not actively charging now uses a plug accessory and an accurate battery menu label.
-- The center input indicator remains two letters but now prefers the specific keyboard-layout identity, while menus and accessibility use the full localized source name.
+- External power that is paused, complete, or not actively charging now uses a larger vertical plug accessory with visual weight comparable to the charging bolt and an accurate battery menu label.
+- The center input indicator now uses the native identity artwork supplied by macOS instead of a custom two-letter abbreviation; menus and accessibility use the full localized source name.
+- Battery, Connectivity, and Input Source now appear as separate standard AppKit submenus. Apple's own Control Center panels remain unavailable to third-party apps through public APIs.
 - Wi-Fi controls now expose scanning, connecting, disconnecting, and power-transition states and prevent duplicate actions while an operation is in progress.
 - Nearby Wi-Fi networks are grouped into known and other networks without an arbitrary result limit; the current network is pinned and checked.
 - Hidden-network and password prompts now use labeled AppKit controls, native validation, security selection, and Show Password behavior.

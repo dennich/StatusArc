@@ -19,7 +19,8 @@ A small accessory sits immediately to the right of the composite icon:
 
 - Charging: `bolt.fill` in normal semantic foreground.
 - Connected to external power but paused, not charging, or fully charged:
-  `powerplug.fill` in normal semantic foreground.
+  the vertical `powerplug.portrait.fill` in normal semantic foreground, with
+  `powerplug.fill` as the macOS-version fallback.
 - Running on battery: empty.
 
 Low-battery warnings affect only the arc; no warning dot is drawn. Accessory changes use a
@@ -35,18 +36,15 @@ the state never depends on red or yellow alone. The arc radius does not change.
 
 ## 2. Input source — center
 
-Display exactly two letters for the active input source. The code represents
-the specific source where possible, rather than only its language, so layouts
-that share a language remain distinguishable.
+Use the identity artwork macOS exposes for the active Text Input Source. Prefer
+`kTISPropertyIconImageURL`; use the source's public legacy IconRef when built-in
+layouts expose no image URL. Draw a standard keyboard symbol only when neither
+property supplies artwork.
 
-Examples include `US`, `GB`, `DV`, `UA`, and `DE`. Prefer a region or a stable
-layout abbreviation from the system input-source identity, then fall back to
-the two-letter language code. The menu,
-tooltip, and accessibility value use the complete localized system source name.
-
-Ukrainian is intentionally displayed as `UA` for this project's UI convention.
-
-The text should remain visually centered and readable at normal menu-bar size.
+The menu, tooltip, and accessibility value use the complete localized system
+source name from `kTISPropertyLocalizedName`. Do not invent a language or
+country abbreviation. Keep the artwork aspect-fitted, visually centered, and
+readable at normal menu-bar size.
 
 ## 3. Network — bottom
 
@@ -84,12 +82,15 @@ original 30 × 22-point composite geometry, 11.1-point arc radius, and existing
 internal spacing. Trim the original transparent left inset and unused outer padding:
 
 - No accessory: 24-point image and item width.
-- Charging bolt or external-power plug: 34-point image and item width. Fit the symbol within its
-  original 8 × 12-point bounds without stretching; preserve its gap to the arc.
+- Charging bolt or external-power plug: 34-point image and item width. Keep the
+  bolt within its original 8 × 12-point bounds. Fit the vertical plug within
+  the seven-point visible accessory width and use slightly greater height and
+  weight so it balances the bolt. Preserve each symbol's
+  aspect ratio and its gap to the arc.
 
 The image and native item widths change together during the 180 ms transition.
 The accessory fades at the expanding or contracting edge. Icon artwork is never
 scaled; the status button uses no image scaling. Accessories remain vertically
-centered, and the arc, language, and network keep their relative geometry.
+centered, and the arc, input source, and network keep their relative geometry.
 Neighboring menu-bar items move when the item expands or contracts. Reduce Motion
 applies the final image and width immediately.

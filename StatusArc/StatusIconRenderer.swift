@@ -75,8 +75,8 @@ final class StatusIconRenderer {
                 differentiateWithoutColor: differentiateWithoutColor
             )
 
-            self.drawLanguage(
-                snapshot.languageCode,
+            self.drawInputSource(
+                snapshot.inputSourceIcon,
                 in: compositeRect,
                 color: bright
             )
@@ -194,53 +194,87 @@ final class StatusIconRenderer {
 
     private func batteryAccessory(_ battery: BatteryStatus?, foreground: NSColor) -> NSImage? {
         let symbolName: String
+        let pointSize: CGFloat
+        let maximumSize: NSSize
+        let weight: NSFont.Weight
         switch Self.accessoryState(for: battery) {
         case .none:
             return nil
         case .bolt:
             symbolName = "bolt.fill"
+            pointSize = 10
+            maximumSize = NSSize(width: 8, height: 12)
+            weight = .regular
         case .plug:
-            symbolName = "powerplug.fill"
+            symbolName = NSImage(systemSymbolName: "powerplug.portrait.fill", accessibilityDescription: nil) == nil
+                ? "powerplug.fill"
+                : "powerplug.portrait.fill"
+            pointSize = 11.5
+            // Seven points is the remaining visible width in the 34-point item.
+            // Extra height and weight make the portrait plug visually balance
+            // the bolt without clipping it or moving it toward the arc.
+            maximumSize = NSSize(width: 7, height: 12.5)
+            weight = .medium
         }
 
-        let configuration = NSImage.SymbolConfiguration(pointSize: 10, weight: .regular)
+        let configuration = NSImage.SymbolConfiguration(pointSize: pointSize, weight: weight)
             .applying(.init(paletteColors: [foreground]))
         guard let symbol = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)?
             .withSymbolConfiguration(configuration) else { return nil }
 
-        // Fit the bolt without stretching; layout uses its actual width.
-        let scale = min(8 / symbol.size.width, 12 / symbol.size.height)
+        // Preserve each symbol's aspect ratio and the original arc/accessory gap.
+        let scale = min(
+            maximumSize.width / symbol.size.width,
+            maximumSize.height / symbol.size.height
+        )
         symbol.size = NSSize(width: symbol.size.width * scale, height: symbol.size.height * scale)
         return symbol
     }
 
-    private func drawLanguage(
-        _ code: String,
+    private func drawInputSource(
+        _ inputSourceIcon: NSImage?,
         in rect: NSRect,
         color: NSColor
     ) {
-        let font = NSFont.monospacedSystemFont(
-            ofSize: 8.2,
-            weight: .semibold
+        let sourceImage: NSImage
+        if let inputSourceIcon {
+            sourceImage = inputSourceIcon
+        } else {
+            let configuration = NSImage.SymbolConfiguration(pointSize: 9, weight: .medium)
+                .applying(.init(paletteColors: [color]))
+            guard let fallback = NSImage(
+                systemSymbolName: "keyboard",
+                accessibilityDescription: nil
+            )?.withSymbolConfiguration(configuration) else {
+                return
+            }
+            sourceImage = fallback
+        }
+
+        guard sourceImage.size.width > 0, sourceImage.size.height > 0 else {
+            return
+        }
+
+        let maximumSize = NSSize(width: 12, height: 9.5)
+        let scale = min(
+            maximumSize.width / sourceImage.size.width,
+            maximumSize.height / sourceImage.size.height
         )
-
-        let paragraph = NSMutableParagraphStyle()
-        paragraph.alignment = .center
-
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: font,
-            .foregroundColor: color,
-            .paragraphStyle: paragraph
-        ]
-
-        let textRect = NSRect(
-            x: rect.minX + 4,
-            y: 6.1,
-            width: rect.width - 8,
-            height: 10
+        let imageSize = NSSize(
+            width: sourceImage.size.width * scale,
+            height: sourceImage.size.height * scale
         )
-
-        (code as NSString).draw(in: textRect, withAttributes: attributes)
+        sourceImage.draw(
+            in: NSRect(
+                x: rect.midX - imageSize.width / 2,
+                y: 6.35,
+                width: imageSize.width,
+                height: imageSize.height
+            ),
+            from: .zero,
+            operation: .sourceOver,
+            fraction: 1
+        )
     }
 
     private func drawNetworkIndicator(

@@ -5,7 +5,7 @@ and keyboard-input status into one compact icon.
 
 ```text
       ╭────────╮    battery level
-         EN        current input source
+        [A]        current input source
         ● ● ●      active network
 ```
 
@@ -27,20 +27,21 @@ battery percentage and the rest is dimmed.
 
 Low-battery urgency takes precedence over Low Power Mode. Charging does not
 change the arc color: a small `bolt.fill` SF Symbol appears immediately to the
-right of the composite icon. A `powerplug.fill` appears when external power is
-connected but charging is paused or complete. A low-battery
+right of the composite icon. A slightly larger vertical
+`powerplug.portrait.fill` appears when external power is connected but charging
+is paused or complete. A low-battery
 warning is represented by the red arc alone. No warning dot is shown. The item
 width is 24 points without an accessory and 34 points with either accessory. Neighboring
 menu-bar items move as it expands or contracts.
 Accessory changes use a short shift-and-fade transition, disabled when Reduce
-Motion is enabled. Language and network indicators retain their normal semantic colors.
+Motion is enabled. Input-source and network indicators retain their normal semantic colors.
 
 ### Input source — center
 
-The center shows a compact two-letter code for the current keyboard/input
-source, such as `US`, `UA`, or `DE`.
-
-Ukrainian is intentionally shown as `UA` in the UI.
+The center uses the identity artwork supplied by macOS for the current keyboard
+input source. Menus, the tooltip, and accessibility expose its complete native
+localized name. A standard keyboard symbol is used only when an input source
+does not provide public artwork.
 
 ### Network — bottom indicator
 
@@ -61,7 +62,8 @@ interface reported by macOS instead of blindly preferring one.
 
 ## Features
 
-Clicking the StatusArc icon opens a combined controls menu.
+Clicking the StatusArc icon opens a standard macOS menu with separate Battery,
+Connectivity, and Input Source submenus.
 
 **Battery**
 - Current battery percentage
@@ -154,8 +156,8 @@ See [PRIVACY.md](PRIVACY.md) for more detail.
   Accessibility/UI scripting, so it does not present a menu item that promises
   this unavailable action.
 - Apple does not expose a public API that presents or embeds its Battery, Wi-Fi,
-  or Input status menus. StatusArc therefore uses a standard AppKit `NSMenu` for
-  the one combined menu. Hidden-network and password prompts use standard
+  or Input status menus. StatusArc therefore uses standard AppKit submenus for
+  the three components. Hidden-network and password prompts use standard
   AppKit controls because CoreWLAN provides the action but no system join UI.
 - Enterprise/802.1X Wi-Fi is handed off to macOS Wi-Fi Settings because
   identities, certificates, and managed credentials are better handled by the

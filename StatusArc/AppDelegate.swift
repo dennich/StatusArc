@@ -25,9 +25,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     private var scannedNetworks: [CWNetwork] = []
     private var wifiOperation: WiFiOperation = .idle
 
+    private let batteryMenuItem = NSMenuItem(title: "Battery", action: nil, keyEquivalent: "")
+    private let batteryMenu = NSMenu(title: "Battery")
     private let batteryItem = NSMenuItem(title: "Battery", action: nil, keyEquivalent: "")
     private let batteryPowerItem = NSMenuItem(title: "Power Source", action: nil, keyEquivalent: "")
 
+    private let connectivityMenuItem = NSMenuItem(title: "Connectivity", action: nil, keyEquivalent: "")
+    private let connectivityMenu = NSMenu(title: "Connectivity")
     private let networkItem = NSMenuItem(title: "Network", action: nil, keyEquivalent: "")
     private let wifiToggleItem = NSMenuItem(title: "Wi-Fi", action: nil, keyEquivalent: "")
     private let disconnectWiFiItem = NSMenuItem(title: "Disconnect Wi-Fi", action: nil, keyEquivalent: "")
@@ -36,8 +40,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     private let wifiDetailsItem = NSMenuItem(title: "Connection Details", action: nil, keyEquivalent: "")
     private let wifiDetailsMenu = NSMenu(title: "Connection Details")
 
-    private let inputItem = NSMenuItem(title: "Input", action: nil, keyEquivalent: "")
-    private let inputSourcesItem = NSMenuItem(title: "Input Sources", action: nil, keyEquivalent: "")
+    private let inputItem = NSMenuItem(title: "Input Source", action: nil, keyEquivalent: "")
     private let inputSourcesMenu = NSMenu(title: "Input Sources")
 
     private let versionItem = NSMenuItem(title: "StatusArc", action: nil, keyEquivalent: "")
@@ -103,67 +106,53 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         wifiNetworksMenu.autoenablesItems = false
         wifiDetailsMenu.autoenablesItems = false
         inputSourcesMenu.autoenablesItems = false
+        batteryMenu.autoenablesItems = false
 
         batteryItem.isEnabled = false
         batteryPowerItem.isEnabled = false
         networkItem.isEnabled = false
-        inputItem.isEnabled = false
         versionItem.isEnabled = false
 
-        // Battery — mirrors the actionable part of Apple's Battery menu.
-        menu.addItem(sectionItem("Battery"))
-        menu.addItem(batteryItem)
-        menu.addItem(batteryPowerItem)
-
-        let batterySettings = actionItem(
+        // Apple does not expose its Control Center panels to third-party apps.
+        // Standard AppKit submenus preserve native menu behavior without
+        // reproducing those private panels as custom views.
+        batteryMenuItem.submenu = batteryMenu
+        batteryMenu.addItem(batteryItem)
+        batteryMenu.addItem(batteryPowerItem)
+        batteryMenu.addItem(.separator())
+        batteryMenu.addItem(actionItem(
             "Battery Settings…",
             #selector(openBatterySettings)
-        )
-        menu.addItem(batterySettings)
+        ))
+        menu.addItem(batteryMenuItem)
 
-        menu.addItem(.separator())
-
-        // Network / Wi-Fi.
-        menu.addItem(sectionItem("Network"))
-        menu.addItem(networkItem)
+        connectivityMenuItem.submenu = connectivityMenu
+        connectivityMenu.addItem(networkItem)
+        connectivityMenu.addItem(.separator())
 
         wifiToggleItem.target = self
         wifiToggleItem.action = #selector(toggleWiFi)
-        menu.addItem(wifiToggleItem)
+        connectivityMenu.addItem(wifiToggleItem)
 
         disconnectWiFiItem.target = self
         disconnectWiFiItem.action = #selector(disconnectWiFi)
-        menu.addItem(disconnectWiFiItem)
+        connectivityMenu.addItem(disconnectWiFiItem)
 
         wifiNetworksItem.submenu = wifiNetworksMenu
-        menu.addItem(wifiNetworksItem)
+        connectivityMenu.addItem(wifiNetworksItem)
 
         wifiDetailsItem.submenu = wifiDetailsMenu
-        menu.addItem(wifiDetailsItem)
+        connectivityMenu.addItem(wifiDetailsItem)
 
-        menu.addItem(actionItem(
+        connectivityMenu.addItem(.separator())
+        connectivityMenu.addItem(actionItem(
             "Network Settings…",
             #selector(openNetworkSettings)
         ))
+        menu.addItem(connectivityMenuItem)
 
-        menu.addItem(.separator())
-
-        // Input menu.
-        menu.addItem(sectionItem("Input"))
+        inputItem.submenu = inputSourcesMenu
         menu.addItem(inputItem)
-
-        inputSourcesItem.submenu = inputSourcesMenu
-        menu.addItem(inputSourcesItem)
-
-        menu.addItem(actionItem(
-            "Emoji & Symbols…",
-            #selector(showEmojiAndSymbols)
-        ))
-
-        menu.addItem(actionItem(
-            "Keyboard Settings…",
-            #selector(openKeyboardSettings)
-        ))
 
         menu.addItem(.separator())
 
@@ -325,9 +314,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
 
             batteryItem.title = "Battery: \(percent)% • \(stateText)"
             batteryPowerItem.title = "Power Source: \(battery.powerSource)"
+            batteryMenuItem.title = "Battery: \(percent)%"
         } else {
             batteryItem.title = "Battery: Not available"
             batteryPowerItem.title = "Power Source: —"
+            batteryMenuItem.title = "Battery"
         }
     }
 
@@ -387,6 +378,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
             break
         }
 
+        connectivityMenuItem.title = networkItem.title.replacingOccurrences(
+            of: "Network:",
+            with: "Connectivity:",
+            options: [.anchored]
+        )
+
         switch wifiOperation {
         case .changingPower(true):
             wifiToggleItem.title = "Wi-Fi: Turning On…"
@@ -417,7 +414,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     }
 
     private func updateInputMenu(_ snapshot: StatusSnapshot) {
-        inputItem.title = "Input: \(snapshot.inputSourceName)"
+        inputItem.title = "Input Source: \(snapshot.inputSourceName)"
     }
 
     private func updateApplicationMenu() {
@@ -864,8 +861,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         let currentID = actions.currentInputSourceID()
 
         for (index, source) in inputSources.enumerated() {
+            let identity = InputSourceIdentityResolver.resolve(source)
             let item = NSMenuItem(
-                title: actions.inputSourceName(source),
+                title: identity.localizedName,
                 action: #selector(selectInputSource(_:)),
                 keyEquivalent: ""
             )
@@ -875,6 +873,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
 
             if actions.inputSourceID(source) == currentID {
                 item.state = .on
+            }
+
+            if let icon = identity.icon?.copy() as? NSImage {
+                icon.size = NSSize(width: 16, height: 16)
+                item.image = icon
             }
 
             inputSourcesMenu.addItem(item)
@@ -889,6 +892,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
             empty.isEnabled = false
             inputSourcesMenu.addItem(empty)
         }
+
+        inputSourcesMenu.addItem(.separator())
+        inputSourcesMenu.addItem(actionItem(
+            "Emoji & Symbols…",
+            #selector(showEmojiAndSymbols)
+        ))
+        inputSourcesMenu.addItem(actionItem(
+            "Keyboard Settings…",
+            #selector(openKeyboardSettings)
+        ))
     }
 
     @objc private func selectInputSource(_ sender: NSMenuItem) {

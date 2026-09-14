@@ -18,10 +18,10 @@ Wireless Diagnostics.
 
 macOS does not provide a public API for a third-party app to present, embed, or
 combine Apple's Battery, Wi-Fi, and Input status menus. StatusArc therefore uses
-the standard AppKit `NSMenu` and `NSMenuItem` implementation for its combined
-menu. Its content must follow the corresponding system menus, and any bespoke
-menu surface requires a documented reason that a native menu or action is
-insufficient.
+standard AppKit `NSMenu` and `NSMenuItem` submenus for Battery, Connectivity,
+and Input Source. Their content must follow the corresponding system menus. Any
+bespoke menu surface requires a documented reason that a native menu or action
+is insufficient.
 
 The public menu API also does not expose Apple's embedded Wi-Fi toggle row or
 the trailing details button from the system status menu. On macOS 13, StatusArc
@@ -62,6 +62,11 @@ Reads passive system state:
 - Internet-path availability through Network.framework;
 - current keyboard input source through Text Input Source Services.
 
+The input source snapshot includes its complete native localized name and the
+public identity artwork supplied by Text Input Source Services. Some built-in
+layouts expose only the documented legacy IconRef, so the renderer supports
+that compatibility fallback as well as the preferred image URL.
+
 It returns a `StatusSnapshot` used by both the renderer and menu.
 
 ## `SystemActions.swift`
@@ -81,7 +86,7 @@ privacy impact easier to review.
 Draws the fixed-size menu-bar image using AppKit/Core Graphics:
 
 - battery arc;
-- input-source label;
+- native input-source identity artwork;
 - Wi-Fi dots or Ethernet line.
 
 The image is not marked as a template image because the battery arc needs

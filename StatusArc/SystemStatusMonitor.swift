@@ -104,7 +104,7 @@ enum NetworkStatus {
 struct StatusSnapshot {
     let battery: BatteryStatus?
     let network: NetworkStatus
-    let languageCode: String
+    let inputSourceIcon: NSImage?
     let inputSourceName: String
 
     var tooltip: String {
@@ -332,7 +332,7 @@ final class SystemStatusMonitor: NSObject, CWEventDelegate {
         return StatusSnapshot(
             battery: readBattery(),
             network: readNetworkStatus(),
-            languageCode: inputSource.code,
+            inputSourceIcon: inputSource.icon,
             inputSourceName: inputSource.localizedName
         )
     }
