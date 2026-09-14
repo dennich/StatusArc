@@ -144,8 +144,8 @@ final class StatusIconRenderer {
         let center = CGPoint(x: rect.midX, y: 11)
         let radius: CGFloat = 10
         let lineWidth: CGFloat = 1.75
-        let startAngle = CGFloat.pi * (7.0 / 6.0)
-        let endAngle = -CGFloat.pi / 6.0
+        let startAngle = CGFloat.pi * (10.0 / 9.0)
+        let endAngle = -CGFloat.pi / 9.0
 
         let activeColor: NSColor
         let remainderColor: NSColor
@@ -188,7 +188,7 @@ final class StatusIconRenderer {
         guard fraction > 0 else { return }
 
         // The highlighted segment length is the exact battery percentage.
-        let sweep = CGFloat.pi * (4.0 / 3.0)
+        let sweep = CGFloat.pi * (11.0 / 9.0)
         let activeEndAngle = startAngle - (sweep * CGFloat(fraction))
 
         context.saveGState()
