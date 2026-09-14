@@ -20,16 +20,14 @@ struct StatusControlCenterView: View {
         .frame(maxHeight: .infinity, alignment: .top)
     }
 
-    @ViewBuilder
     private var islandStack: some View {
         VStack(spacing: 10) {
-            if let expandedIsland = model.expandedIsland {
-                expandedIslandView(expandedIsland)
-            } else {
-                compactIsland(.battery)
-                compactIsland(.connectivity)
-                compactIsland(.inputSource)
+            ForEach(visibleIslands, id: \.self) { kind in
+                island(kind)
+                    .transition(.opacity)
+            }
 
+            if model.expandedIsland == nil {
                 HStack(spacing: 8) {
                     Button(model.updateTitle) { model.checkForUpdates?() }
                     Spacer()
@@ -42,57 +40,23 @@ struct StatusControlCenterView: View {
         .frame(maxWidth: .infinity, alignment: .top)
     }
 
-    @ViewBuilder
-    private func compactIsland(_ kind: StatusIsland) -> some View {
-        islandSurface(kind, expanded: false) {
-            Button {
-                toggleIsland(kind)
-            } label: {
-                compactHeader(for: kind)
-                    .padding(14)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint("Expands \(kind.accessibilityName) controls")
+    private var visibleIslands: [StatusIsland] {
+        if let expandedIsland = model.expandedIsland {
+            return [expandedIsland]
         }
+        return [.battery, .connectivity, .inputSource]
     }
 
     @ViewBuilder
-    private func compactHeader(for kind: StatusIsland) -> some View {
+    private func island(_ kind: StatusIsland) -> some View {
+        let expanded = model.expandedIsland == kind
         switch kind {
         case .battery:
-            CompactIslandHeader(
-                symbol: "battery.100",
-                title: "Battery",
-                subtitle: model.batteryState,
-                trailing: model.batteryPercentage.map { "\($0)%" } ?? "—"
-            )
+            islandSurface(kind, expanded: expanded) { batteryContent }
         case .connectivity:
-            CompactIslandHeader(
-                symbol: "wifi",
-                title: model.networkTitle,
-                subtitle: model.networkDetail
-            )
+            islandSurface(kind, expanded: expanded) { connectivityContent }
         case .inputSource:
-            CompactIslandHeader(
-                symbol: "keyboard",
-                title: "Input Source",
-                subtitle: model.inputSourceName,
-                badge: model.inputSourceLabel
-            )
-        }
-    }
-
-    @ViewBuilder
-    private func expandedIslandView(_ kind: StatusIsland) -> some View {
-        switch kind {
-        case .battery:
-            islandSurface(kind, expanded: true) { batteryContent }
-        case .connectivity:
-            islandSurface(kind, expanded: true) { connectivityContent }
-        case .inputSource:
-            islandSurface(kind, expanded: true) { inputSourceContent }
+            islandSurface(kind, expanded: expanded) { inputSourceContent }
         }
     }
 
@@ -104,7 +68,7 @@ struct StatusControlCenterView: View {
     ) -> some View {
         let shape = RoundedRectangle(cornerRadius: expanded ? 24 : 30, style: .continuous)
         let base = content()
-            .padding(expanded ? 18 : 0)
+            .padding(expanded ? 18 : 14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(shape)
 
@@ -183,6 +147,7 @@ struct StatusControlCenterView: View {
                     get: { model.wifiOn },
                     set: { model.setWiFiPower?($0) }
                 ),
+                showsToggle: model.expandedIsland == .connectivity,
                 toggleDisabled: model.wifiBusy,
                 action: { toggleIsland(.connectivity) }
             )
@@ -261,7 +226,7 @@ struct StatusControlCenterView: View {
                                 Text(source.label)
                                     .font(.system(size: 12, weight: .semibold))
                                     .frame(width: 28, height: 22)
-                                    .background(.white.opacity(0.15), in: RoundedRectangle(cornerRadius: 5))
+                                    .background(.white, in: RoundedRectangle(cornerRadius: 5))
                                 Text(source.name)
                                 Spacer()
                                 if source.isCurrent {
@@ -299,62 +264,6 @@ struct StatusControlCenterView: View {
     }
 }
 
-private extension StatusIsland {
-    var accessibilityName: String {
-        switch self {
-        case .battery: return "battery"
-        case .connectivity: return "connectivity"
-        case .inputSource: return "input source"
-        }
-    }
-}
-
-private struct CompactIslandHeader: View {
-    let symbol: String
-    let title: String
-    let subtitle: String
-    var trailing: String? = nil
-    var badge: String? = nil
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Group {
-                if let badge {
-                    Text(badge)
-                        .font(.system(size: 15, weight: .bold))
-                } else {
-                    Image(systemName: symbol)
-                        .font(.system(size: 20, weight: .semibold))
-                        .symbolRenderingMode(.hierarchical)
-                }
-            }
-            .foregroundStyle(.tint)
-            .frame(width: 42, height: 42)
-            .background(.white.opacity(0.15), in: Circle())
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.headline)
-                Text(subtitle)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-
-            Spacer(minLength: 8)
-
-            if let trailing {
-                Text(trailing)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.secondary)
-            }
-
-            Image(systemName: "chevron.down")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.tertiary)
-        }
-    }
-}
-
 private struct IslandHeader: View {
     let symbol: String
     let title: String
@@ -363,6 +272,7 @@ private struct IslandHeader: View {
     var badge: String? = nil
     let expanded: Bool
     var toggle: Binding<Bool>?
+    var showsToggle = true
     var toggleDisabled = false
     let action: () -> Void
 
@@ -382,7 +292,7 @@ private struct IslandHeader: View {
                     }
                     .foregroundStyle(.tint)
                     .frame(width: 42, height: 42)
-                    .background(.white.opacity(0.15), in: Circle())
+                    .background(.white, in: Circle())
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text(title).font(.headline)
@@ -404,15 +314,19 @@ private struct IslandHeader: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.tertiary)
                 }
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .frame(maxWidth: .infinity)
 
-            if let toggle {
+            if showsToggle, let toggle {
                 Toggle("", isOn: toggle)
                     .labelsHidden()
-                    .disabled(toggleDisabled)
+                .disabled(toggleDisabled)
             }
         }
+        .frame(maxWidth: .infinity)
     }
 }
 
@@ -451,7 +365,7 @@ private struct EnergyModeRow: View {
         } label: {
             HStack(spacing: 11) {
                 ZStack {
-                    Circle().fill(selected ? Color.accentColor : Color.white.opacity(0.15))
+                    Circle().fill(selected ? Color.accentColor : Color.white)
                     Image(systemName: symbol)
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(selected ? .white : .secondary)
@@ -497,8 +411,8 @@ private struct NetworkRow: View {
                 Image(systemName: wifiSymbol)
                     .font(.system(size: 16, weight: .semibold))
                     .frame(width: 30, height: 30)
-                    .background(network.isCurrent ? Color.accentColor : Color.white.opacity(0.15), in: Circle())
-                    .foregroundStyle(network.isCurrent ? .white : .primary)
+                    .background(.white, in: Circle())
+                    .foregroundStyle(network.isCurrent ? Color.accentColor : Color.primary)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(network.name)
                     if network.isKnown && !network.isCurrent {
