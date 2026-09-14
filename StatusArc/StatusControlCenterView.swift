@@ -8,7 +8,7 @@ struct StatusControlCenterView: View {
     var body: some View {
         Group {
             if #available(macOS 26.0, *) {
-                GlassEffectContainer(spacing: 12) {
+                GlassEffectContainer(spacing: 8) {
                     islandStack
                 }
             } else {
@@ -16,34 +16,83 @@ struct StatusControlCenterView: View {
             }
         }
         .padding(12)
-        .frame(width: 360, alignment: .top)
+        .frame(width: 360)
+        .frame(maxHeight: .infinity, alignment: .top)
     }
 
+    @ViewBuilder
     private var islandStack: some View {
         VStack(spacing: 10) {
-            island(.battery) { batteryContent }
-            island(.connectivity) { connectivityContent }
-            island(.inputSource) { inputSourceContent }
+            if let expandedIsland = model.expandedIsland {
+                expandedIslandView(expandedIsland)
+            } else {
+                compactIsland(.battery)
+                compactIsland(.connectivity)
+                compactIsland(.inputSource)
 
-            HStack(spacing: 8) {
-                Button(model.updateTitle) { model.checkForUpdates?() }
-                Spacer()
-                Button("Quit") { model.quit?() }
+                HStack(spacing: 8) {
+                    Button(model.updateTitle) { model.checkForUpdates?() }
+                    Spacer()
+                    Button("Quit") { model.quit?() }
+                }
+                .font(.system(size: 12))
+                .padding(.horizontal, 6)
             }
-            .font(.system(size: 12))
-            .padding(.horizontal, 6)
+        }
+        .frame(maxWidth: .infinity, alignment: .top)
+    }
+
+    @ViewBuilder
+    private func compactIsland(_ kind: StatusIsland) -> some View {
+        islandSurface(kind, expanded: false) {
+            Button {
+                toggleIsland(kind)
+            } label: {
+                compactHeader(for: kind)
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Expands \(kind.accessibilityName) controls")
         }
     }
 
     @ViewBuilder
-    private func island<Content: View>(
-        _ kind: StatusIsland,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        if model.expandedIsland == kind {
-            islandSurface(kind, expanded: true, content: content)
-        } else {
-            islandSurface(kind, expanded: false, content: content)
+    private func compactHeader(for kind: StatusIsland) -> some View {
+        switch kind {
+        case .battery:
+            CompactIslandHeader(
+                symbol: "battery.100",
+                title: "Battery",
+                subtitle: model.batteryState,
+                trailing: model.batteryPercentage.map { "\($0)%" } ?? "—"
+            )
+        case .connectivity:
+            CompactIslandHeader(
+                symbol: "wifi",
+                title: model.networkTitle,
+                subtitle: model.networkDetail
+            )
+        case .inputSource:
+            CompactIslandHeader(
+                symbol: "keyboard",
+                title: "Input Source",
+                subtitle: model.inputSourceName,
+                badge: model.inputSourceLabel
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func expandedIslandView(_ kind: StatusIsland) -> some View {
+        switch kind {
+        case .battery:
+            islandSurface(kind, expanded: true) { batteryContent }
+        case .connectivity:
+            islandSurface(kind, expanded: true) { connectivityContent }
+        case .inputSource:
+            islandSurface(kind, expanded: true) { inputSourceContent }
         }
     }
 
@@ -55,7 +104,7 @@ struct StatusControlCenterView: View {
     ) -> some View {
         let shape = RoundedRectangle(cornerRadius: expanded ? 24 : 30, style: .continuous)
         let base = content()
-            .padding(expanded ? 18 : 14)
+            .padding(expanded ? 18 : 0)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(shape)
 
@@ -96,19 +145,19 @@ struct StatusControlCenterView: View {
                         title: "Automatic",
                         symbol: "battery.100",
                         selected: model.lowPowerModeEnabled == false,
-                        action: { model.openBatterySettings?() }
+                        action: nil
                     )
                     EnergyModeRow(
                         title: "Low Power",
                         symbol: "battery.25",
                         selected: model.lowPowerModeEnabled == true,
-                        action: { model.openBatterySettings?() }
+                        action: nil
                     )
                     EnergyModeRow(
                         title: "High Power",
                         symbol: "battery.100.bolt",
                         selected: false,
-                        action: { model.openBatterySettings?() }
+                        action: nil
                     )
                 }
 
@@ -212,7 +261,7 @@ struct StatusControlCenterView: View {
                                 Text(source.label)
                                     .font(.system(size: 12, weight: .semibold))
                                     .frame(width: 28, height: 22)
-                                    .background(.primary.opacity(0.1), in: RoundedRectangle(cornerRadius: 5))
+                                    .background(.white.opacity(0.15), in: RoundedRectangle(cornerRadius: 5))
                                 Text(source.name)
                                 Spacer()
                                 if source.isCurrent {
@@ -250,6 +299,62 @@ struct StatusControlCenterView: View {
     }
 }
 
+private extension StatusIsland {
+    var accessibilityName: String {
+        switch self {
+        case .battery: return "battery"
+        case .connectivity: return "connectivity"
+        case .inputSource: return "input source"
+        }
+    }
+}
+
+private struct CompactIslandHeader: View {
+    let symbol: String
+    let title: String
+    let subtitle: String
+    var trailing: String? = nil
+    var badge: String? = nil
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Group {
+                if let badge {
+                    Text(badge)
+                        .font(.system(size: 15, weight: .bold))
+                } else {
+                    Image(systemName: symbol)
+                        .font(.system(size: 20, weight: .semibold))
+                        .symbolRenderingMode(.hierarchical)
+                }
+            }
+            .foregroundStyle(.tint)
+            .frame(width: 42, height: 42)
+            .background(.white.opacity(0.15), in: Circle())
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.headline)
+                Text(subtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 8)
+
+            if let trailing {
+                Text(trailing)
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
+
+            Image(systemName: "chevron.down")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
+        }
+    }
+}
+
 private struct IslandHeader: View {
     let symbol: String
     let title: String
@@ -277,7 +382,7 @@ private struct IslandHeader: View {
                     }
                     .foregroundStyle(.tint)
                     .frame(width: 42, height: 42)
-                    .background(.primary.opacity(0.1), in: Circle())
+                    .background(.white.opacity(0.15), in: Circle())
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text(title).font(.headline)
@@ -336,15 +441,17 @@ private struct EnergyModeRow: View {
     let title: String
     let symbol: String
     let selected: Bool
-    let action: () -> Void
+    let action: (() -> Void)?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isHovered = false
 
     var body: some View {
-        Button(action: action) {
+        Button {
+            action?()
+        } label: {
             HStack(spacing: 11) {
                 ZStack {
-                    Circle().fill(selected ? Color.accentColor : Color.primary.opacity(0.12))
+                    Circle().fill(selected ? Color.accentColor : Color.white.opacity(0.15))
                     Image(systemName: symbol)
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(selected ? .white : .secondary)
@@ -353,20 +460,13 @@ private struct EnergyModeRow: View {
                 Text(title)
                     .foregroundStyle(selected ? .primary : .secondary)
                 Spacer()
-                if selected {
-                    Image(systemName: "checkmark")
-                        .foregroundStyle(.secondary)
-                } else {
-                    Image(systemName: "arrow.up.forward")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                }
             }
             .contentShape(Rectangle())
             .padding(.horizontal, 8)
             .padding(.vertical, 5)
         }
         .buttonStyle(.plain)
+        .disabled(action == nil)
         .background(
             isHovered ? Color.primary.opacity(0.085) : .clear,
             in: RoundedRectangle(cornerRadius: 10)
@@ -382,10 +482,8 @@ private struct EnergyModeRow: View {
                 isHovered = hovered
             }
         }
-        .help("Change Energy Mode in Battery Settings")
         .accessibilityElement(children: .combine)
         .accessibilityValue(selected ? "Selected" : "Not selected")
-        .accessibilityHint("Opens Battery Settings to change Energy Mode")
     }
 }
 
@@ -399,7 +497,7 @@ private struct NetworkRow: View {
                 Image(systemName: wifiSymbol)
                     .font(.system(size: 16, weight: .semibold))
                     .frame(width: 30, height: 30)
-                    .background(network.isCurrent ? Color.accentColor : Color.primary.opacity(0.1), in: Circle())
+                    .background(network.isCurrent ? Color.accentColor : Color.white.opacity(0.15), in: Circle())
                     .foregroundStyle(network.isCurrent ? .white : .primary)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(network.name)

@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 
 enum StatusMotion {
-    static let expansionDuration: TimeInterval = 0.34
+    static let expansionDuration: TimeInterval = 0.26
     static let expansion = Animation.timingCurve(
         0.22, 1.0, 0.36, 1.0,
         duration: expansionDuration
