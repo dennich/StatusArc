@@ -25,6 +25,8 @@ material and ordinary matched animation. Reduce Motion disables transitions.
 One shared cubic timing curve drives island layout. AppKit grows the transparent
 hosting panel before expansion and delays contraction until SwiftUI completes,
 so two layout engines never animate the same edge at once.
+Compact and expanded islands are separate conditional views with the same glass
+identity, allowing the system matched-glass transition to morph their geometry.
 
 AppKit continues to own `NSStatusItem`, system lifecycle, actions, and dialogs.
 On macOS 27 and later the panel participates in the public

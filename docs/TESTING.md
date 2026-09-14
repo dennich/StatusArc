@@ -27,6 +27,7 @@ control behavior, keyboard navigation, accessibility, and enabled states.
 ## Battery
 
 - Confirm the arc roughly matches the current percentage.
+- Confirm the full track spans 240 degrees and leaves a centered bottom gap.
 - Confirm the unused arc is dimmed.
 - Confirm the Battery island reports percentage, charging/fully charged state,
   power source, and time remaining.

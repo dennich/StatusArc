@@ -4,7 +4,7 @@ The menu-bar icon has three information zones.
 
 ## 1. Battery — top arc
 
-The 270-degree top arc represents battery percentage and leaves a centered gap
+The 240-degree top arc represents battery percentage and leaves a centered gap
 for the bottom network indicator.
 
 - The active track length equals the exact current battery percentage.

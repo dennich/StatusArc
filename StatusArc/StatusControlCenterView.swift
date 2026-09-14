@@ -40,9 +40,22 @@ struct StatusControlCenterView: View {
         _ kind: StatusIsland,
         @ViewBuilder content: () -> Content
     ) -> some View {
-        let shape = RoundedRectangle(cornerRadius: model.expandedIsland == kind ? 24 : 30, style: .continuous)
+        if model.expandedIsland == kind {
+            islandSurface(kind, expanded: true, content: content)
+        } else {
+            islandSurface(kind, expanded: false, content: content)
+        }
+    }
+
+    @ViewBuilder
+    private func islandSurface<Content: View>(
+        _ kind: StatusIsland,
+        expanded: Bool,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        let shape = RoundedRectangle(cornerRadius: expanded ? 24 : 30, style: .continuous)
         let base = content()
-            .padding(model.expandedIsland == kind ? 18 : 14)
+            .padding(expanded ? 18 : 14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(shape)
 
@@ -56,6 +69,7 @@ struct StatusControlCenterView: View {
                 .background(.regularMaterial, in: shape)
                 .overlay(shape.stroke(.white.opacity(0.14), lineWidth: 0.7))
                 .shadow(color: .black.opacity(0.2), radius: 12, y: 5)
+                .matchedGeometryEffect(id: kind.rawValue, in: glassNamespace)
         }
     }
 
