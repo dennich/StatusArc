@@ -18,7 +18,9 @@ The top half-arc represents battery percentage.
 A small accessory sits immediately to the right of the composite icon:
 
 - Charging: `bolt.fill` in normal semantic foreground.
-- Otherwise: empty.
+- Connected to external power but paused, not charging, or fully charged:
+  `powerplug.fill` in normal semantic foreground.
+- Running on battery: empty.
 
 Low-battery warnings affect only the arc; no warning dot is drawn. Bolt changes use a
 180 ms ease-in-out transition: the composite shifts to its new center while

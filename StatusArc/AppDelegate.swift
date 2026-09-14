@@ -75,6 +75,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             button.imagePosition = .imageOnly
             button.imageScaling = .scaleNone
             button.toolTip = "StatusArc"
+            button.setAccessibilityLabel("StatusArc")
         }
     }
 
@@ -225,6 +226,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         updateStatusIcon(snapshot)
         statusItem.button?.toolTip = snapshot.tooltip
+        statusItem.button?.setAccessibilityValue(snapshot.tooltip)
 
         updateBatteryMenu(snapshot)
         updateNetworkMenu(snapshot)
@@ -275,16 +277,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let percent = battery.displayedPercentage
 
             var stateText: String
-            if battery.isFullyCharged {
+            switch battery.powerState {
+            case .fullyCharged:
                 stateText = "Fully Charged"
-            } else if battery.isCharging {
+            case .charging:
                 stateText = "Charging"
-            } else {
+            case .connectedNotCharging:
+                stateText = "Not Charging"
+            case .onBattery:
                 stateText = "Battery"
             }
 
             if let minutes = battery.minutesRemaining {
                 stateText += " • \(formattedDuration(minutes))"
+            }
+
+            if battery.isLowPowerModeEnabled {
+                stateText += " • Low Power Mode"
             }
 
             batteryItem.title = "Battery: \(percent)% • \(stateText)"
@@ -342,7 +351,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func updateInputMenu(_ snapshot: StatusSnapshot) {
-        inputItem.title = "Input: \(snapshot.languageCode)"
+        inputItem.title = "Input: \(snapshot.inputSourceName)"
     }
 
     private func updateApplicationMenu() {

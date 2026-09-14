@@ -23,10 +23,25 @@ struct BatteryStatus {
     let level: Double
     let isCharging: Bool
     let isFullyCharged: Bool
+    let isConnectedToExternalPower: Bool
     let isLowPowerModeEnabled: Bool
     let warningLevel: BatteryWarningLevel
     let powerSource: String
     let minutesRemaining: Int?
+
+    enum PowerState {
+        case onBattery
+        case charging
+        case fullyCharged
+        case connectedNotCharging
+    }
+
+    var powerState: PowerState {
+        if isCharging { return .charging }
+        if isFullyCharged { return .fullyCharged }
+        if isConnectedToExternalPower { return .connectedNotCharging }
+        return .onBattery
+    }
 
     var displayedPercentage: Int {
         Int((level * 100).rounded())
@@ -69,20 +84,28 @@ struct StatusSnapshot {
     let battery: BatteryStatus?
     let network: NetworkStatus
     let languageCode: String
+    let inputSourceName: String
 
     var tooltip: String {
         let batteryText: String
 
         if let battery {
             let percent = battery.displayedPercentage
-            batteryText = battery.isCharging
-                ? "Battery \(percent)% • Charging"
-                : "Battery \(percent)%"
+            switch battery.powerState {
+            case .onBattery:
+                batteryText = "Battery \(percent)%"
+            case .charging:
+                batteryText = "Battery \(percent)% • Charging"
+            case .fullyCharged:
+                batteryText = "Battery \(percent)% • Fully Charged"
+            case .connectedNotCharging:
+                batteryText = "Battery \(percent)% • Power Adapter"
+            }
         } else {
             batteryText = "Battery unavailable"
         }
 
-        return "\(batteryText) • \(network.description) • \(languageCode)"
+        return "\(batteryText) • \(network.description) • \(inputSourceName)"
     }
 }
 
@@ -268,10 +291,12 @@ final class SystemStatusMonitor: NSObject, CWEventDelegate {
     }
 
     func snapshot() -> StatusSnapshot {
-        StatusSnapshot(
+        let inputSource = readInputSource()
+        return StatusSnapshot(
             battery: readBattery(),
             network: readNetworkStatus(),
-            languageCode: readLanguageCode()
+            languageCode: inputSource.code,
+            inputSourceName: inputSource.localizedName
         )
     }
 
@@ -303,7 +328,8 @@ final class SystemStatusMonitor: NSObject, CWEventDelegate {
             let warningLevel = BatteryWarningLevel(systemLevel: IOPSGetBatteryWarningLevel())
 
             let powerSourceState = description[kIOPSPowerSourceStateKey as String] as? String
-            let powerSource = powerSourceState == kIOPSACPowerValue
+            let isConnectedToExternalPower = powerSourceState == kIOPSACPowerValue
+            let powerSource = isConnectedToExternalPower
                 ? "Power Adapter"
                 : "Battery"
 
@@ -318,6 +344,7 @@ final class SystemStatusMonitor: NSObject, CWEventDelegate {
                 level: level,
                 isCharging: isCharging,
                 isFullyCharged: isFullyCharged,
+                isConnectedToExternalPower: isConnectedToExternalPower,
                 isLowPowerModeEnabled: isLowPowerModeEnabled,
                 warningLevel: warningLevel,
                 powerSource: powerSource,
@@ -406,65 +433,8 @@ final class SystemStatusMonitor: NSObject, CWEventDelegate {
             || interfaceName.hasPrefix("bond")
     }
 
-    private func readLanguageCode() -> String {
+    private func readInputSource() -> InputSourceIdentity {
         let source = TISCopyCurrentKeyboardInputSource().takeRetainedValue()
-
-        if let pointer = TISGetInputSourceProperty(
-            source,
-            kTISPropertyInputSourceLanguages
-        ) {
-            let languages = Unmanaged<CFArray>
-                .fromOpaque(pointer)
-                .takeUnretainedValue() as? [String]
-
-            if let language = languages?.first {
-                return displayCode(for: language)
-            }
-        }
-
-        if let pointer = TISGetInputSourceProperty(
-            source,
-            kTISPropertyLocalizedName
-        ) {
-            let name = Unmanaged<CFString>
-                .fromOpaque(pointer)
-                .takeUnretainedValue() as String
-
-            return fallbackCode(from: name)
-        }
-
-        return "—"
-    }
-
-    private func displayCode(for identifier: String) -> String {
-        let normalized = identifier.lowercased()
-
-        // User-facing code. Ukrainian is intentionally shown as UA
-        // rather than ISO language code "UK", matching the requested UI.
-        if normalized.hasPrefix("uk") { return "UA" }
-        if normalized.hasPrefix("en") { return "EN" }
-
-        let pieces = normalized.split(whereSeparator: { $0 == "-" || $0 == "_" })
-        if let first = pieces.first, first.count >= 2 {
-            return String(first.prefix(2)).uppercased()
-        }
-
-        return String(normalized.prefix(2)).uppercased()
-    }
-
-    private func fallbackCode(from name: String) -> String {
-        let upper = name.uppercased()
-
-        if upper.contains("UKRAIN") { return "UA" }
-        if upper.contains("ENGLISH") || upper.contains("U.S.") || upper == "ABC" {
-            return "EN"
-        }
-
-        let letters = upper.filter(\.isLetter)
-        if letters.count >= 2 {
-            return String(letters.prefix(2))
-        }
-
-        return "—"
+        return InputSourceIdentityResolver.resolve(source)
     }
 }

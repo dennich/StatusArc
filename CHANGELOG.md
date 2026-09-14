@@ -7,6 +7,8 @@ All notable user-visible changes to StatusArc are documented here.
 ### Changed
 - Wi-Fi joins now check only the user keychain for saved passwords. If none is available, StatusArc asks for the password without requesting administrator access to the System keychain.
 - Battery, network, and input-source changes now refresh from macOS events, with a low-frequency recovery refresh, instead of waiting for one-second polling.
+- External power that is paused, complete, or not actively charging now uses a plug accessory and an accurate battery menu label.
+- The center input indicator remains two letters but now prefers the specific keyboard-layout identity, while menus and accessibility use the full localized source name.
 
 ## [1.2.0] - 2026-09-12
 

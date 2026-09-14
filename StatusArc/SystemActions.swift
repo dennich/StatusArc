@@ -280,10 +280,15 @@ final class SystemActions: NSObject, CLLocationManagerDelegate {
         let sources = array as? [TISInputSource] ?? []
 
         return sources.filter { source in
-            boolProperty(
-                source,
-                key: kTISPropertyInputSourceIsSelectCapable
+            InputSourceIdentityResolver.boolProperty(
+                source, key: kTISPropertyInputSourceIsSelectCapable
             )
+                && InputSourceIdentityResolver.boolProperty(
+                    source, key: kTISPropertyInputSourceIsEnabled
+                )
+                && InputSourceIdentityResolver.stringProperty(
+                    source, key: kTISPropertyInputSourceCategory
+                ) == kTISCategoryKeyboardInputSource as String
         }
     }
 
@@ -293,13 +298,11 @@ final class SystemActions: NSObject, CLLocationManagerDelegate {
     }
 
     func inputSourceName(_ source: TISInputSource) -> String {
-        stringProperty(source, key: kTISPropertyLocalizedName)
-            ?? inputSourceID(source)
-            ?? "Input Source"
+        InputSourceIdentityResolver.resolve(source).localizedName
     }
 
     func inputSourceID(_ source: TISInputSource) -> String? {
-        stringProperty(source, key: kTISPropertyInputSourceID)
+        InputSourceIdentityResolver.stringProperty(source, key: kTISPropertyInputSourceID)
     }
 
     func selectInputSource(_ source: TISInputSource) throws {
@@ -311,33 +314,6 @@ final class SystemActions: NSObject, CLLocationManagerDelegate {
         }
     }
 
-    private func stringProperty(
-        _ source: TISInputSource,
-        key: CFString
-    ) -> String? {
-        guard let pointer = TISGetInputSourceProperty(source, key) else {
-            return nil
-        }
-
-        return Unmanaged<CFString>
-            .fromOpaque(pointer)
-            .takeUnretainedValue() as String
-    }
-
-    private func boolProperty(
-        _ source: TISInputSource,
-        key: CFString
-    ) -> Bool {
-        guard let pointer = TISGetInputSourceProperty(source, key) else {
-            return false
-        }
-
-        let value = Unmanaged<CFBoolean>
-            .fromOpaque(pointer)
-            .takeUnretainedValue()
-
-        return CFBooleanGetValue(value)
-    }
 }
 
 enum StatusArcActionError: LocalizedError {

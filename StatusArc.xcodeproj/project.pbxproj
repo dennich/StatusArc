@@ -20,6 +20,7 @@
 		A10000000000000000000011 /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A20000000000000000000013 /* CoreLocation.framework */; };
 		A10000000000000000000012 /* UpdateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000014 /* UpdateManager.swift */; };
 		A10000000000000000000013 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = A90000000000000000000002 /* Sparkle */; };
+		A10000000000000000000014 /* InputSourceIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000015 /* InputSourceIdentity.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -37,6 +38,7 @@
 		A20000000000000000000012 /* SystemActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemActions.swift; sourceTree = "<group>"; };
 		A20000000000000000000013 /* CoreLocation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = System/Library/Frameworks/CoreLocation.framework; sourceTree = SDKROOT; };
 		A20000000000000000000014 /* UpdateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateManager.swift; sourceTree = "<group>"; };
+		A20000000000000000000015 /* InputSourceIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputSourceIdentity.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -73,6 +75,7 @@
 				A20000000000000000000002 /* AppDelegate.swift */,
 				A20000000000000000000014 /* UpdateManager.swift */,
 				A20000000000000000000003 /* SystemStatusMonitor.swift */,
+				A20000000000000000000015 /* InputSourceIdentity.swift */,
 				A20000000000000000000004 /* StatusIconRenderer.swift */,
 				A20000000000000000000012 /* SystemActions.swift */,
 				A20000000000000000000009 /* Info.plist */,
@@ -179,6 +182,7 @@
 				A10000000000000000000002 /* AppDelegate.swift in Sources */,
 				A10000000000000000000012 /* UpdateManager.swift in Sources */,
 				A10000000000000000000003 /* SystemStatusMonitor.swift in Sources */,
+				A10000000000000000000014 /* InputSourceIdentity.swift in Sources */,
 				A10000000000000000000004 /* StatusIconRenderer.swift in Sources */,
 				A10000000000000000000010 /* SystemActions.swift in Sources */,
 			);

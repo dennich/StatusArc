@@ -6,13 +6,19 @@ final class StatusIconRenderer {
     private static let imageHeight: CGFloat = 22
 
     enum AccessoryState {
-        case none, bolt
+        case none, bolt, plug
     }
 
     static func accessoryState(for battery: BatteryStatus?) -> AccessoryState {
         guard let battery else { return .none }
-        if battery.isCharging { return .bolt }
-        return .none
+        switch battery.powerState {
+        case .onBattery:
+            return .none
+        case .charging:
+            return .bolt
+        case .fullyCharged, .connectedNotCharging:
+            return .plug
+        }
     }
 
     func render(
@@ -169,13 +175,19 @@ final class StatusIconRenderer {
     }
 
     private func batteryAccessory(_ battery: BatteryStatus?, foreground: NSColor) -> NSImage? {
-        guard let battery else { return nil }
-
-        guard battery.isCharging else { return nil }
+        let symbolName: String
+        switch Self.accessoryState(for: battery) {
+        case .none:
+            return nil
+        case .bolt:
+            symbolName = "bolt.fill"
+        case .plug:
+            symbolName = "powerplug.fill"
+        }
 
         let configuration = NSImage.SymbolConfiguration(pointSize: 10, weight: .regular)
             .applying(.init(paletteColors: [foreground]))
-        guard let symbol = NSImage(systemSymbolName: "bolt.fill", accessibilityDescription: nil)?
+        guard let symbol = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)?
             .withSymbolConfiguration(configuration) else { return nil }
 
         // Fit the bolt without stretching; layout uses its actual width.

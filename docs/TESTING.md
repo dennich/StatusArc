@@ -47,6 +47,10 @@ control behavior, keyboard navigation, accessibility, and enabled states.
 | 20% | on | none | yes | yellow / bolt |
 | 30% | off and on | early and final | yes | red / bolt |
 
+Also confirm that external power with charging paused, charging complete, or
+the battery otherwise not charging shows the plug accessory and an accurate
+menu label rather than claiming active charging.
+
 - Check that percentage alone never triggers a warning: 25.49% displays 25%, 25.50% displays 26%, and neither is urgent without a system warning. Also check 0% and 10% with no warning.
 - Confirm early/final macOS warnings show a red arc without a dot, including with Low Power Mode enabled.
 - Confirm the unused arc is dim neutral, dim red, or dim yellow to match its state.
