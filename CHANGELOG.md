@@ -6,6 +6,7 @@ All notable user-visible changes to StatusArc are documented here.
 
 ### Changed
 - Wi-Fi joins now check only the user keychain for saved passwords. If none is available, StatusArc asks for the password without requesting administrator access to the System keychain.
+- Battery, network, and input-source changes now refresh from macOS events, with a low-frequency recovery refresh, instead of waiting for one-second polling.
 
 ## [1.2.0] - 2026-09-12
 

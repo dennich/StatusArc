@@ -69,7 +69,13 @@ semantic green/yellow/red colors.
 
 ## Refresh model
 
-StatusArc currently refreshes once per second. This favors implementation
-simplicity and immediate input-source/network feedback. Future work could
-replace some polling with system notifications if it reduces overhead without
-making the code fragile.
+StatusArc refreshes from public system notifications:
+
+- IOKit power-source changes;
+- CoreWLAN power, SSID, link, quality, and scan-cache changes;
+- System Configuration primary-route changes;
+- Text Input Source selection and enabled-source changes;
+- wake and accessibility-display-option changes.
+
+A 60-second fallback refresh recovers from any notification that a framework or
+OS release fails to deliver. Opening the menu also reads a fresh snapshot.

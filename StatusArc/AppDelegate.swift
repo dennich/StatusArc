@@ -9,7 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let renderer = StatusIconRenderer()
     private let updateManager = UpdateManager()
 
-    private var timer: Timer?
+    private var fallbackRefreshTimer: Timer?
     private var lastIconSnapshot: StatusSnapshot?
     private var iconAnimation: StatusIconAnimation?
     private var inputSources: [TISInputSource] = []
@@ -43,23 +43,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         updateManager.start()
 
+        monitor.startMonitoring { [weak self] in
+            self?.refresh()
+        }
         refresh()
 
-        timer = Timer.scheduledTimer(
-            timeInterval: 1.0,
+        fallbackRefreshTimer = Timer.scheduledTimer(
+            timeInterval: 60.0,
             target: self,
             selector: #selector(refreshTimerFired),
             userInfo: nil,
             repeats: true
         )
 
-        if let timer {
-            RunLoop.main.add(timer, forMode: .common)
+        if let fallbackRefreshTimer {
+            RunLoop.main.add(fallbackRefreshTimer, forMode: .common)
         }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        timer?.invalidate()
+        fallbackRefreshTimer?.invalidate()
+        monitor.stopMonitoring()
         iconAnimation?.stop()
         updateManager.stop()
     }

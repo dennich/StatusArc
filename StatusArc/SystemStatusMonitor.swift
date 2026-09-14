@@ -86,8 +86,186 @@ struct StatusSnapshot {
     }
 }
 
-final class SystemStatusMonitor {
+final class SystemStatusMonitor: NSObject, CWEventDelegate {
     private let wifiClient = CWWiFiClient.shared()
+    private var onChange: (() -> Void)?
+    private var powerSourceRunLoopSource: CFRunLoopSource?
+    private var networkDynamicStore: SCDynamicStore?
+    private var refreshScheduled = false
+    private var isMonitoring = false
+
+    func startMonitoring(onChange: @escaping () -> Void) {
+        self.onChange = onChange
+        guard !isMonitoring else { return }
+        isMonitoring = true
+
+        startPowerSourceMonitoring()
+        startWiFiMonitoring()
+        startNetworkRouteMonitoring()
+        startInputSourceMonitoring()
+
+        let workspaceNotifications = NSWorkspace.shared.notificationCenter
+        workspaceNotifications.addObserver(
+            self,
+            selector: #selector(observedSystemStateDidChange),
+            name: NSWorkspace.didWakeNotification,
+            object: nil
+        )
+        workspaceNotifications.addObserver(
+            self,
+            selector: #selector(observedSystemStateDidChange),
+            name: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification,
+            object: nil
+        )
+    }
+
+    func stopMonitoring() {
+        guard isMonitoring else { return }
+        isMonitoring = false
+
+        if let powerSourceRunLoopSource {
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), powerSourceRunLoopSource, .commonModes)
+        }
+        powerSourceRunLoopSource = nil
+
+        if let networkDynamicStore {
+            SCDynamicStoreSetDispatchQueue(networkDynamicStore, nil)
+        }
+        networkDynamicStore = nil
+
+        _ = try? wifiClient.stopMonitoringAllEvents()
+        wifiClient.delegate = nil
+
+        DistributedNotificationCenter.default().removeObserver(self)
+        NSWorkspace.shared.notificationCenter.removeObserver(self)
+        onChange = nil
+    }
+
+    private func startPowerSourceMonitoring() {
+        let context = Unmanaged.passUnretained(self).toOpaque()
+        guard let source = IOPSNotificationCreateRunLoopSource({ context in
+            guard let context else { return }
+            let monitor = Unmanaged<SystemStatusMonitor>
+                .fromOpaque(context)
+                .takeUnretainedValue()
+            monitor.systemStateDidChange()
+        }, context)?.takeRetainedValue() else {
+            return
+        }
+
+        powerSourceRunLoopSource = source
+        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
+    }
+
+    private func startWiFiMonitoring() {
+        wifiClient.delegate = self
+
+        let events: [CWEventType] = [
+            .powerDidChange,
+            .ssidDidChange,
+            .linkDidChange,
+            .linkQualityDidChange,
+            .scanCacheUpdated
+        ]
+
+        for event in events {
+            _ = try? wifiClient.startMonitoringEvent(with: event)
+        }
+    }
+
+    private func startNetworkRouteMonitoring() {
+        var context = SCDynamicStoreContext(
+            version: 0,
+            info: Unmanaged.passUnretained(self).toOpaque(),
+            retain: nil,
+            release: nil,
+            copyDescription: nil
+        )
+
+        guard let store = SCDynamicStoreCreate(
+            nil,
+            "StatusArc.NetworkMonitor" as CFString,
+            { _, _, context in
+                guard let context else { return }
+                let monitor = Unmanaged<SystemStatusMonitor>
+                    .fromOpaque(context)
+                    .takeUnretainedValue()
+                monitor.systemStateDidChange()
+            },
+            &context
+        ) else {
+            return
+        }
+
+        let keys = [
+            "State:/Network/Global/IPv4",
+            "State:/Network/Global/IPv6"
+        ] as CFArray
+
+        guard SCDynamicStoreSetNotificationKeys(store, keys, nil),
+              SCDynamicStoreSetDispatchQueue(store, .main) else {
+            return
+        }
+
+        networkDynamicStore = store
+    }
+
+    private func startInputSourceMonitoring() {
+        let notifications = DistributedNotificationCenter.default()
+        notifications.addObserver(
+            self,
+            selector: #selector(observedSystemStateDidChange),
+            name: Notification.Name(kTISNotifySelectedKeyboardInputSourceChanged as String),
+            object: nil
+        )
+        notifications.addObserver(
+            self,
+            selector: #selector(observedSystemStateDidChange),
+            name: Notification.Name(kTISNotifyEnabledKeyboardInputSourcesChanged as String),
+            object: nil
+        )
+    }
+
+    @objc private func observedSystemStateDidChange() {
+        systemStateDidChange()
+    }
+
+    private func systemStateDidChange() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.isMonitoring, !self.refreshScheduled else { return }
+            self.refreshScheduled = true
+
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                self.refreshScheduled = false
+                self.onChange?()
+            }
+        }
+    }
+
+    func powerStateDidChangeForWiFiInterface(withName interfaceName: String) {
+        systemStateDidChange()
+    }
+
+    func ssidDidChangeForWiFiInterface(withName interfaceName: String) {
+        systemStateDidChange()
+    }
+
+    func linkDidChangeForWiFiInterface(withName interfaceName: String) {
+        systemStateDidChange()
+    }
+
+    func linkQualityDidChangeForWiFiInterface(
+        withName interfaceName: String,
+        rssi: Int,
+        transmitRate: Double
+    ) {
+        systemStateDidChange()
+    }
+
+    func scanCacheUpdatedForWiFiInterface(withName interfaceName: String) {
+        systemStateDidChange()
+    }
 
     func snapshot() -> StatusSnapshot {
         StatusSnapshot(
