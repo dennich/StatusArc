@@ -18,33 +18,23 @@ Wireless Diagnostics.
 
 macOS does not provide a public API for a third-party app to present, embed, or
 combine Apple's Battery, Wi-Fi, and Input status menus. StatusArc therefore uses
-standard AppKit `NSMenu` and `NSMenuItem` submenus for Battery, Connectivity,
-and Input Source. Their content must follow the corresponding system menus. Any
-bespoke menu surface requires a documented reason that a native menu or action
-is insufficient.
+a SwiftUI-hosted panel containing one island for each component. On macOS 26
+and later the islands use public `GlassEffectContainer`, `glassEffect`, and
+matched glass transitions. Earlier supported versions use semantic system
+material and ordinary matched animation. Reduce Motion disables transitions.
 
-The public menu API also does not expose Control Center's custom header rows.
-StatusArc uses small AppKit menu-item views only where an actual native control
-is available: a battery summary header and an `NSSwitch` backed by CoreWLAN for
-Wi-Fi power. On macOS 26 and later these views use the public
-`NSGlassEffectView`; earlier supported versions use the semantic AppKit menu
-material. Other rows remain standard `NSMenuItem` objects so keyboard and
-accessibility behavior stay native.
+AppKit continues to own `NSStatusItem`, system lifecycle, actions, and dialogs.
+On macOS 27 and later the panel participates in the public
+`NSStatusItemExpandedInterfaceDelegate` lifecycle. Earlier releases toggle the
+same panel from the status-bar button. This custom surface is necessary because
+the system component panels cannot be invoked or embedded through public APIs.
 
-Menu opening never starts a Wi-Fi scan or rebuilds a tracked Connectivity
-submenu. Nearby-network scans remain explicit user actions so asynchronous
-results cannot disrupt pointer tracking between sibling submenus.
-
-The public menu API also does not expose Apple's embedded Wi-Fi toggle row or
-the trailing details button from the system status menu. On macOS 13, StatusArc
-uses standard command items (`Turn Wi-Fi On` / `Turn Wi-Fi Off`) and exposes
-connection details when the combined menu is opened with Option held. This
-keeps standard menu keyboard and accessibility behavior without a custom-drawn
-menu row.
+Nearby-network scans remain explicit user actions. Async results update the
+open Connectivity island without entering nested menu-tracking sessions.
 
 The compact network zone is required to remain exactly three dots for Wi-Fi.
 When a Wi-Fi association has no usable Internet path, StatusArc therefore keeps
-the signal dots and reports the warning in the standard menu, tooltip, and
+the signal dots and reports the warning in the expanded panel, tooltip, and
 accessibility value instead of replacing the zone with Apple's larger Wi-Fi
 warning symbol.
 
@@ -60,9 +50,21 @@ Starts `NSApplication`, installs `AppDelegate`, and runs as an accessory app.
 
 ## `AppDelegate.swift`
 
-Owns the `NSStatusItem`, menu hierarchy, refresh timer, and user interaction.
-It turns the current system snapshot into menu text and dispatches explicit
+Owns the `NSStatusItem`, refresh timer, panel bridge, and user interaction. It
+turns the current system snapshot into panel data and dispatches explicit
 actions to `SystemActions`.
+
+## `StatusControlCenterModel.swift` and `StatusControlCenterView.swift`
+
+Model and render the three expandable component islands. The model contains no
+CoreWLAN or Text Input Source objects; stable row identifiers route actions back
+through `AppDelegate`.
+
+## `StatusPanelController.swift`
+
+Hosts SwiftUI in a transient AppKit panel, anchors it below the status item,
+tracks dynamic height, and handles native expanded-interface, outside-click,
+and Escape dismissal.
 
 ## `SystemStatusMonitor.swift`
 
@@ -79,7 +81,7 @@ compact label derived from the source's public name, language, and ASCII-capable
 properties. Apple does not expose the compact badge used by its own Input menu;
 StatusArc therefore does not consume the unrelated legacy IconRef artwork.
 
-It returns a `StatusSnapshot` used by both the renderer and menu.
+It returns a `StatusSnapshot` used by both the renderer and expanded panel.
 
 ## `SystemActions.swift`
 

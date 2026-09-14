@@ -12,8 +12,8 @@ and permission outcomes. Change the underlying state both inside and outside
 StatusArc and confirm the UI follows macOS without stale or contradictory
 states.
 
-For every custom menu or dialog, record why a public system menu or action
-cannot perform the task. Confirm the fallback uses standard AppKit menu and
+For every custom panel or dialog, record why a public system menu or action
+cannot perform the task. Confirm the fallback uses standard SwiftUI/AppKit
 control behavior, keyboard navigation, accessibility, and enabled states.
 
 ## Build and launch
@@ -22,13 +22,14 @@ control behavior, keyboard navigation, accessibility, and enabled states.
 - Launch it.
 - Confirm there is no Dock icon.
 - Confirm exactly one StatusArc item appears in the menu bar.
-- Confirm clicking the item opens the menu.
+- Confirm clicking the item opens three compact component islands.
 
 ## Battery
 
 - Confirm the arc roughly matches the current percentage.
 - Confirm the unused arc is dimmed.
-- Confirm the menu reports battery percentage, charging/fully charged state, power source, and time remaining as before.
+- Confirm the Battery island reports percentage, charging/fully charged state,
+  power source, and time remaining.
 - Inject synthetic snapshots in a development harness to validate the following matrix without changing system power settings:
 
 | Percentage | Low Power Mode | macOS warning | Charging | Expected arc / accessory |
@@ -49,7 +50,7 @@ control behavior, keyboard navigation, accessibility, and enabled states.
 
 Also confirm that external power with charging paused, charging complete, or
 the battery otherwise not charging shows the plug accessory and an accurate
-menu label rather than claiming active charging.
+panel label rather than claiming active charging.
 
 - Confirm the plug is vertical, slightly larger than before, and has comparable
   visual weight to the bolt without changing the arc radius or accessory gap.
@@ -88,9 +89,9 @@ menu label rather than claiming active charging.
   disables Join until a name is entered; and supports Show Password.
 - Confirm scans group the current, known, and other networks without truncating results.
 - While scanning, connecting, disconnecting, and toggling power, confirm duplicate
-  actions are disabled and the menu reports the transient state.
+  actions are disabled and the panel reports the transient state.
 - Check Wi-Fi off, Wi-Fi on but disconnected, and a local connection without an
-  Internet path; confirm the menu and accessibility value distinguish them.
+  Internet path; confirm the panel and accessibility value distinguish them.
 - Option-open StatusArc and inspect Connection Details. Confirm IP address,
   router, band, protocol, security, radio values, and Wireless Diagnostics.
 
@@ -112,32 +113,38 @@ menu label rather than claiming active charging.
   optical vertical alignment, and remain readable at normal menu-bar size.
 - Confirm ASCII sources use a compact system-name label and non-ASCII sources
   use the native language name rather than a fixed country-code mapping.
-- Confirm each submenu item, the parent item, tooltip, and accessibility value use the source's full localized system name.
+- Confirm each input-source row, the island header, tooltip, and accessibility
+  value use the source's full localized system name.
 - Switch using the macOS keyboard shortcut and confirm StatusArc follows.
 - Open Emoji & Symbols.
 - Confirm Keyboard Viewer opens when Text Input Source Services exposes it and
   appears disabled otherwise.
 - Open the input-source-name and Keyboard Settings destinations.
 
-## Menu structure
+## Expanded panel
 
-- Confirm the root menu exposes Battery, Connectivity, and Input Source as three
-  standard keyboard-navigable submenus.
-- Compare the content and enabled states with the corresponding macOS menus.
-- Confirm Connectivity contains a working `NSSwitch`, known networks, an Other
-  Networks submenu, and Network and Wi-Fi Settings destinations.
+- Confirm the collapsed panel shows exactly three islands: Battery,
+  Connectivity, and Input Source.
+- Open each island and then switch directly between them. Confirm the prior
+  island contracts while the next expands without pointer-tracking delay.
+- Compare content, controls, and enabled states with the corresponding macOS
+  component panels.
+- Confirm Connectivity contains a working system toggle, nearby and known
+  networks, and Network and Wi-Fi Settings destinations.
 - Confirm Battery shows its percentage, power state, power source, and the
   current public Energy Mode state. Confirm read-only Energy Mode choices are
   disabled rather than pretending to change protected system state.
 - Confirm all three Energy Mode rows show circular battery symbols and the
   current public mode uses the accented state.
-- On macOS 26 or later, confirm custom control surfaces use Liquid Glass. On
-  macOS 13–15, confirm they use the semantic menu material with readable text.
-- Move repeatedly between the three component submenus. Confirm no Wi-Fi scan
-  begins on open and no submenu reconstruction interrupts pointer tracking.
+- On macOS 26 or later, confirm the islands use Liquid Glass and matched
+  expansion transitions. On macOS 13–25, confirm they use semantic material
+  with readable text and smooth state changes.
+- Enable Reduce Motion and confirm islands change state without transition.
+- Confirm clicking outside the panel, pressing Escape, or clicking the status
+  item again dismisses it.
 - Confirm Battery Settings, Network Settings, Keyboard Settings, Emoji &
   Symbols, and Wireless Diagnostics invoke the available public system actions.
-- Confirm custom surfaces use only public AppKit materials and controls.
+- Confirm the panel uses only public SwiftUI/AppKit materials and controls.
 
 ## Settings shortcuts
 

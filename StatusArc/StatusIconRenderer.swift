@@ -103,7 +103,9 @@ final class StatusIconRenderer {
                 dim: dim
             )
 
-            let accessoryCenterX = compositeRect.maxX + accessoryWidth / 2
+            // Keep the accessory close to the smaller Figma arc without
+            // changing the symbol itself or the dynamic status-item widths.
+            let accessoryCenterX = compositeRect.midX + 12 + accessoryWidth / 2
             func drawAccessory(_ image: NSImage?, opacity: CGFloat) {
                 guard let image, opacity > 0 else { return }
                 image.draw(
@@ -139,9 +141,11 @@ final class StatusIconRenderer {
         dim: NSColor,
         differentiateWithoutColor: Bool
     ) {
-        let center = CGPoint(x: rect.midX, y: 9.6)
-        let radius: CGFloat = 11.1
+        let center = CGPoint(x: rect.midX, y: 11)
+        let radius: CGFloat = 10
         let lineWidth: CGFloat = 1.75
+        let startAngle = CGFloat.pi * 1.25
+        let endAngle = -CGFloat.pi * 0.25
 
         let activeColor: NSColor
         let remainderColor: NSColor
@@ -171,8 +175,8 @@ final class StatusIconRenderer {
         context.addArc(
             center: center,
             radius: radius,
-            startAngle: .pi,
-            endAngle: 0,
+            startAngle: startAngle,
+            endAngle: endAngle,
             clockwise: true
         )
         context.strokePath()
@@ -184,8 +188,8 @@ final class StatusIconRenderer {
         guard fraction > 0 else { return }
 
         // The highlighted segment length is the exact battery percentage.
-        let startAngle = CGFloat.pi
-        let endAngle = CGFloat.pi - (CGFloat.pi * CGFloat(fraction))
+        let sweep = CGFloat.pi * 1.5
+        let activeEndAngle = startAngle - (sweep * CGFloat(fraction))
 
         context.saveGState()
         context.setStrokeColor(activeColor.cgColor)
@@ -199,7 +203,7 @@ final class StatusIconRenderer {
             center: center,
             radius: radius,
             startAngle: startAngle,
-            endAngle: endAngle,
+            endAngle: activeEndAngle,
             clockwise: true
         )
         context.strokePath()
@@ -250,9 +254,9 @@ final class StatusIconRenderer {
         rect: NSRect,
         color: NSColor
     ) {
-        let font = NSFont.monospacedSystemFont(
+        let font = NSFont.systemFont(
             ofSize: 9.5,
-            weight: .semibold
+            weight: .bold
         )
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
@@ -322,7 +326,7 @@ final class StatusIconRenderer {
         let spacing: CGFloat = 5.2
         let totalWidth = spacing * 2
         let startX = rect.midX - totalWidth / 2
-        let y: CGFloat = 3.0
+        let y: CGFloat = 2.25
 
         for index in 0..<3 {
             let x = startX + CGFloat(index) * spacing
@@ -344,7 +348,7 @@ final class StatusIconRenderer {
         rect: NSRect,
         color: NSColor
     ) {
-        let y: CGFloat = 3.0
+        let y: CGFloat = 2.25
         let halfWidth: CGFloat = 6.35
 
         context.saveGState()

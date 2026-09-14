@@ -128,6 +128,7 @@ private final class BatterySummaryMenuView: NSView {
     }
 }
 
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemValidation {
     private enum WiFiOperation: Equatable {
         case idle
@@ -142,6 +143,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     private let actions = SystemActions()
     private let renderer = StatusIconRenderer()
     private let updateManager = UpdateManager()
+    private let controlCenterModel = StatusControlCenterModel()
+    private var panelController: StatusPanelController?
+    private var expandedInterfaceDelegate: AnyObject?
 
     private var fallbackRefreshTimer: Timer?
     private var appearanceObservation: NSKeyValueObservation?
@@ -182,9 +186,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     func applicationDidFinishLaunching(_ notification: Notification) {
         configureStatusItem()
         configureMenu()
+        configureControlCenter()
 
         updateManager.onUpdateAvailabilityChanged = { [weak self] _ in
             self?.updateApplicationMenu()
+            self?.refresh()
         }
         updateManager.start()
 
@@ -211,6 +217,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         appearanceObservation?.invalidate()
         monitor.stopMonitoring()
         iconAnimation?.stop()
+        panelController?.hide(animated: false)
         updateManager.stop()
     }
 
@@ -312,6 +319,88 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         statusItem.menu = menu
     }
 
+    private func configureControlCenter() {
+        // The status item remains AppKit-owned so its custom drawing and width
+        // follow the system menu bar. SwiftUI owns only the expanded surface.
+        statusItem.menu = nil
+
+        let controller = StatusPanelController(
+            statusItem: statusItem,
+            model: controlCenterModel
+        )
+        controller.onWillShow = { [weak self] in
+            guard let self else { return }
+            self.inputSources = self.actions.enabledInputSources()
+            if self.scannedNetworks.isEmpty {
+                self.scannedNetworks = self.actions.cachedWiFiNetworks()
+            }
+            self.refresh()
+        }
+        panelController = controller
+
+        controlCenterModel.setWiFiPower = { [weak self] enabled in
+            self?.setWiFiPower(enabled)
+        }
+        controlCenterModel.disconnectWiFi = { [weak self] in self?.disconnectWiFi() }
+        controlCenterModel.scanNetworks = { [weak self] in self?.scanNetworksWithPermission() }
+        controlCenterModel.connectNetwork = { [weak self] index in
+            self?.connectToWiFiNetwork(at: index)
+        }
+        controlCenterModel.joinOtherNetwork = { [weak self] in self?.joinOtherNetwork() }
+        controlCenterModel.selectInputSource = { [weak self] index in
+            guard let self else { return }
+            self.selectInputSource(at: index)
+            self.panelController?.requestClose()
+        }
+        controlCenterModel.showEmojiAndSymbols = { [weak self] in
+            self?.performPanelAction { $0.showEmojiAndSymbols() }
+        }
+        controlCenterModel.showKeyboardViewer = { [weak self] in
+            self?.performPanelAction { $0.showKeyboardViewer() }
+        }
+        controlCenterModel.openBatterySettings = { [weak self] in
+            self?.performPanelAction { $0.openBatterySettings() }
+        }
+        controlCenterModel.openActivityMonitor = { [weak self] in
+            self?.performPanelAction { $0.openActivityMonitor() }
+        }
+        controlCenterModel.openWiFiSettings = { [weak self] in
+            self?.performPanelAction { $0.openWiFiSettings() }
+        }
+        controlCenterModel.openNetworkSettings = { [weak self] in
+            self?.performPanelAction { $0.openNetworkSettings() }
+        }
+        controlCenterModel.openWirelessDiagnostics = { [weak self] in
+            self?.performPanelAction { $0.openWirelessDiagnostics() }
+        }
+        controlCenterModel.openKeyboardSettings = { [weak self] in
+            self?.performPanelAction { $0.openKeyboardSettings() }
+        }
+        controlCenterModel.checkForUpdates = { [weak self] in
+            self?.performPanelAction { $0.updateManager.checkForUpdates() }
+        }
+        controlCenterModel.quit = { [weak self] in self?.quit() }
+
+        if #available(macOS 27.0, *) {
+            let delegate = StatusExpandedInterfaceDelegate(panelController: controller)
+            expandedInterfaceDelegate = delegate
+            statusItem.expandedInterfaceDelegate = delegate
+        } else if let button = statusItem.button {
+            button.target = self
+            button.action = #selector(toggleControlCenter)
+            button.sendAction(on: [.leftMouseUp])
+        }
+    }
+
+    @objc private func toggleControlCenter() {
+        panelController?.toggle()
+    }
+
+    private func performPanelAction(_ action: (AppDelegate) -> Void) {
+        panelController?.requestClose()
+        action(self)
+    }
+
     private func sectionItem(_ title: String) -> NSMenuItem {
         if #available(macOS 14.0, *) {
             return NSMenuItem.sectionHeader(title: title)
@@ -385,6 +474,65 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         updateBatteryMenu(snapshot)
         updateNetworkMenu(snapshot)
         updateInputMenu(snapshot)
+        updateControlCenter(snapshot)
+    }
+
+    private func updateControlCenter(_ snapshot: StatusSnapshot) {
+        if inputSources.isEmpty {
+            inputSources = actions.enabledInputSources()
+        }
+
+        let currentInputID = actions.currentInputSourceID()
+        let inputRows = inputSources.enumerated().map { index, source in
+            let identity = InputSourceIdentityResolver.resolve(source)
+            return StatusInputSourceRow(
+                id: index,
+                name: identity.localizedName,
+                label: identity.compactLabel,
+                isCurrent: actions.inputSourceID(source) == currentInputID
+            )
+        }
+
+        let knownNames = actions.knownWiFiNetworkNames()
+        let currentSSID = actions.currentSSID
+        var networkRows = scannedNetworks.enumerated().compactMap { index, network -> StatusNetworkRow? in
+            guard let name = network.ssid, !name.isEmpty else { return nil }
+            return StatusNetworkRow(
+                id: index,
+                name: name,
+                strength: actions.signalStrength(for: network),
+                isSecured: !actions.isOpenNetwork(network),
+                isCurrent: name == currentSSID,
+                isKnown: knownNames.contains(name)
+            )
+        }
+
+        if let currentSSID, !networkRows.contains(where: { $0.name == currentSSID }) {
+            networkRows.insert(StatusNetworkRow(
+                id: -1,
+                name: currentSSID,
+                strength: 3,
+                isSecured: true,
+                isCurrent: true,
+                isKnown: true
+            ), at: 0)
+        }
+        networkRows.sort {
+            if $0.isCurrent != $1.isCurrent { return $0.isCurrent }
+            if $0.isKnown != $1.isKnown { return $0.isKnown }
+            return $0.name.localizedStandardCompare($1.name) == .orderedAscending
+        }
+
+        controlCenterModel.update(
+            snapshot: snapshot,
+            wifiOn: actions.wifiPowerOn,
+            wifiBusy: wifiOperation != .idle,
+            currentSSID: currentSSID,
+            networks: networkRows,
+            inputSources: inputRows,
+            keyboardViewerAvailable: actions.keyboardViewerSource() != nil,
+            availableUpdate: updateManager.availableVersion
+        )
     }
 
     private func updateStatusIcon(_ snapshot: StatusSnapshot) {
@@ -661,8 +809,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     // MARK: - Wi-Fi controls
 
     @objc private func wifiSwitchChanged(_ sender: NSSwitch) {
+        setWiFiPower(sender.state == .on)
+    }
+
+    private func setWiFiPower(_ enabled: Bool) {
         guard wifiOperation == .idle else { return }
-        let enabled = sender.state == .on
         wifiOperation = .changingPower(enabled: enabled)
         refresh()
 
@@ -990,12 +1141,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     }
 
     @objc private func connectToWiFiNetwork(_ sender: NSMenuItem) {
+        connectToWiFiNetwork(at: sender.tag)
+    }
+
+    private func connectToWiFiNetwork(at index: Int) {
         guard wifiOperation == .idle,
-              scannedNetworks.indices.contains(sender.tag) else {
+              scannedNetworks.indices.contains(index) else {
             return
         }
 
-        let network = scannedNetworks[sender.tag]
+        let network = scannedNetworks[index]
 
         if actions.isEnterpriseNetwork(network) {
             showMessage(
@@ -1237,12 +1392,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     }
 
     @objc private func selectInputSource(_ sender: NSMenuItem) {
-        guard inputSources.indices.contains(sender.tag) else {
+        selectInputSource(at: sender.tag)
+    }
+
+    private func selectInputSource(at index: Int) {
+        guard inputSources.indices.contains(index) else {
             return
         }
 
         do {
-            try actions.selectInputSource(inputSources[sender.tag])
+            try actions.selectInputSource(inputSources[index])
             refresh()
         } catch {
             showError(error, title: "Couldn’t Change Input Source")

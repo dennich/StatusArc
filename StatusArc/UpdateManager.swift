@@ -63,6 +63,10 @@ final class UpdateManager: NSObject, SPUUpdaterDelegate {
         periodicCheckTimer = nil
     }
 
+    func checkForUpdates() {
+        updaterController.checkForUpdates(nil)
+    }
+
     @objc private func initialCheckTimerFired() {
         initialCheckTimer = nil
         probeForUpdates()

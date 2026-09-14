@@ -4,7 +4,8 @@ The menu-bar icon has three information zones.
 
 ## 1. Battery — top arc
 
-The top half-arc represents battery percentage.
+The 270-degree top arc represents battery percentage and leaves a centered gap
+for the bottom network indicator.
 
 - The active track length equals the exact current battery percentage.
 - Low battery means an early/final warning from `IOPSGetBatteryWarningLevel()`.
@@ -80,8 +81,9 @@ interface identity remains available in the menu and accessibility text.
 ## Layout intent
 
 Use one dynamically sized status item and a 22-point-high image. Preserve the
-original 30 × 22-point composite geometry, 11.1-point arc radius, and existing
-internal spacing. Trim the original transparent left inset and unused outer padding:
+30 × 22-point composite coordinate space with a 10-point arc radius. Keep the
+network dots and Ethernet line low in the bottom gap. Trim the original
+transparent left inset and unused outer padding:
 
 - No accessory: 24-point image and item width.
 - Charging bolt: 34-point image and item width. Keep the bolt within its

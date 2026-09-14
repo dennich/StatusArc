@@ -54,7 +54,7 @@ source name.
 | Ethernet/LAN | solid line |
 | No active network | `○ ○ ○` |
 
-The menu and accessibility description distinguish Wi-Fi off, disconnected,
+The expanded panel and accessibility description distinguish Wi-Fi off, disconnected,
 and connected without an Internet path. VPN, tunnel, and virtual interfaces use
 the neutral dim-dot indicator instead of being presented as Ethernet.
 
@@ -63,10 +63,12 @@ interface reported by macOS instead of blindly preferring one.
 
 ## Features
 
-Clicking the StatusArc icon opens a standard macOS menu with separate Battery,
-Connectivity, and Input Source submenus. The menu adopts the system appearance;
-its custom summary and Wi-Fi controls use Liquid Glass when macOS provides it
-and the semantic menu material on earlier supported versions.
+Clicking the StatusArc icon opens three component islands for Battery,
+Connectivity, and Input Source. Selecting an island expands it in place, and
+selecting another moves directly between components without submenu tracking.
+The islands use public Liquid Glass and matched transitions on supported macOS
+versions, with semantic system material and reduced-motion behavior on earlier
+supported versions.
 
 **Battery**
 - Current battery percentage
@@ -82,12 +84,10 @@ and the semantic menu material on earlier supported versions.
 - Wi-Fi on/off through a native AppKit switch
 - Disconnect from the current Wi-Fi network
 - Scan nearby Wi-Fi networks
-- Show known networks in the Connectivity menu and remaining networks in an Other Networks submenu
+- Show nearby and known networks directly in the Connectivity island
 - Join open and personal Wi-Fi networks
 - Use a saved Wi-Fi password from the user keychain when available
 - Join another/unlisted network
-- Option-open StatusArc for connection details such as IP address, router,
-  security, protocol, band, RSSI, noise, channel, transmit rate, and interface
 - Open Wireless Diagnostics
 - Open Network Settings
 - Ethernet/LAN detection
@@ -101,7 +101,7 @@ and the semantic menu material on earlier supported versions.
 - Open Keyboard Settings
 
 **Updates**
-- Show the installed StatusArc version in the menu
+- Show update availability in the expanded panel
 - Passively check for a newer release shortly after launch and about once per day
 - Show `Update to <version>…` when a newer release is available
 - Download, verify, install, and relaunch through Sparkle only after user action
@@ -112,8 +112,9 @@ and the semantic menu material on earlier supported versions.
 - A recent version of Xcode
 - A Mac with Apple Silicon or Intel
 
-StatusArc is an AppKit menu-bar agent (`LSUIElement`) and therefore has no Dock
-icon or normal application window.
+StatusArc is a hybrid AppKit and SwiftUI menu-bar agent (`LSUIElement`) and
+therefore has no Dock icon or normal application window. AppKit owns the status
+item and system integration; SwiftUI renders the expandable islands.
 
 ## Build from source
 
@@ -143,7 +144,7 @@ telemetry, advertising, or a network service of its own.
 For software updates, StatusArc uses Sparkle to fetch a public update feed and
 release archive from GitHub. Sparkle system profiling is explicitly disabled.
 Update downloads and installation only begin after the user chooses the update
-item in the StatusArc menu.
+action in the StatusArc panel.
 
 **Location permission:** modern macOS restricts access to nearby Wi-Fi network
 names. StatusArc requests Location access only when you ask it to scan nearby
@@ -163,9 +164,10 @@ See [PRIVACY.md](PRIVACY.md) for more detail.
   macOS versions that expose its palette source. StatusArc shows the standard
   item disabled when the current OS does not expose that public source.
 - Apple does not expose a public API that presents or embeds its Battery, Wi-Fi,
-  or Input status menus. StatusArc therefore uses standard AppKit submenus for
-  the three components. Hidden-network and password prompts use standard
-  AppKit controls because CoreWLAN provides the action but no system join UI.
+  or Input status menus. StatusArc therefore presents three SwiftUI component
+  islands backed by public system APIs. Hidden-network and password prompts use
+  standard AppKit controls because CoreWLAN provides the action but no system
+  join UI.
 - Apple does not expose public third-party controls for Charge to Full Now,
   changing Energy Mode, enumerating significant-energy apps, or toggling Show
   Input Source Name. StatusArc reports the public state and opens the matching
@@ -230,7 +232,7 @@ brew install --cask dennich/tap/statusarc
 > Settings → Privacy & Security** on first launch.
 
 After a Sparkle-enabled release is installed, routine application updates can
-be started directly from the StatusArc menu. Homebrew remains a supported
+be started directly from the StatusArc panel. Homebrew remains a supported
 installation and upgrade channel as well.
 
 See [docs/HOMEBREW.md](docs/HOMEBREW.md) for release, signing, notarization,

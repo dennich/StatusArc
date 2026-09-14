@@ -9,9 +9,10 @@ All notable user-visible changes to StatusArc are documented here.
 - Battery, network, and input-source changes now refresh from macOS events, with a low-frequency recovery refresh, instead of waiting for one-second polling.
 - External power that is paused, complete, or not actively charging now uses a larger vertical plug accessory in a 36-point item, with visual weight comparable to the charging bolt and an accurate battery menu label.
 - The center input indicator now uses a compact label derived from native Text Input Source metadata instead of a fixed two-letter country-code rule; menus and accessibility use the full localized source name.
-- Battery, Connectivity, and Input Source now appear as separate AppKit submenus. Battery exposes the public power and Energy Mode state, Connectivity uses a real Wi-Fi switch and native menu items for known and other networks, and Input Source includes the supported system actions.
-- Custom menu controls use Liquid Glass on supported macOS versions and the semantic menu material on earlier supported versions. Energy Mode rows include native battery symbols in circular state indicators.
-- Opening the menu no longer starts a Wi-Fi scan or rebuilds Connectivity while macOS is tracking the pointer, improving movement between component submenus.
+- Battery, Connectivity, and Input Source now appear as three directly switchable islands in a SwiftUI-hosted AppKit panel. This removes nested submenu tracking while preserving the existing public system actions.
+- Islands use matched Liquid Glass transitions on supported macOS versions and semantic system material on earlier versions. Reduce Motion is respected, and outside click or Escape dismisses the panel.
+- Battery shows visible circular Energy Mode symbols, Connectivity uses a system toggle and inline network list, and Input Source shows complete native names with compact source badges.
+- The battery track now uses the approved 10-point radius and a longer 270-degree arc; the network dots and Ethernet line sit lower in the resulting bottom gap.
 - One- and two-letter input-source labels use the same 9.5-point size and remain optically centered.
 - Wi-Fi controls now expose scanning, connecting, disconnecting, and power-transition states and prevent duplicate actions while an operation is in progress.
 - Nearby Wi-Fi networks are grouped into known and other networks without an arbitrary result limit; the current network is pinned and checked.

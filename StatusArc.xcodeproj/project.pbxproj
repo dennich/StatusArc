@@ -23,6 +23,9 @@
 		A10000000000000000000014 /* InputSourceIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000015 /* InputSourceIdentity.swift */; };
 		A10000000000000000000015 /* WiFiDialogs.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000016 /* WiFiDialogs.swift */; };
 		A10000000000000000000016 /* Network.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A20000000000000000000017 /* Network.framework */; };
+		A10000000000000000000017 /* StatusControlCenterModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000018 /* StatusControlCenterModel.swift */; };
+		A10000000000000000000018 /* StatusControlCenterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000019 /* StatusControlCenterView.swift */; };
+		A10000000000000000000019 /* StatusPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000020 /* StatusPanelController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -43,6 +46,9 @@
 		A20000000000000000000015 /* InputSourceIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputSourceIdentity.swift; sourceTree = "<group>"; };
 		A20000000000000000000016 /* WiFiDialogs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WiFiDialogs.swift; sourceTree = "<group>"; };
 		A20000000000000000000017 /* Network.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Network.framework; path = System/Library/Frameworks/Network.framework; sourceTree = SDKROOT; };
+		A20000000000000000000018 /* StatusControlCenterModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusControlCenterModel.swift; sourceTree = "<group>"; };
+		A20000000000000000000019 /* StatusControlCenterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusControlCenterView.swift; sourceTree = "<group>"; };
+		A20000000000000000000020 /* StatusPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusPanelController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -78,6 +84,9 @@
 			children = (
 				A20000000000000000000001 /* main.swift */,
 				A20000000000000000000002 /* AppDelegate.swift */,
+				A20000000000000000000018 /* StatusControlCenterModel.swift */,
+				A20000000000000000000019 /* StatusControlCenterView.swift */,
+				A20000000000000000000020 /* StatusPanelController.swift */,
 				A20000000000000000000014 /* UpdateManager.swift */,
 				A20000000000000000000003 /* SystemStatusMonitor.swift */,
 				A20000000000000000000015 /* InputSourceIdentity.swift */,
@@ -193,6 +202,9 @@
 				A10000000000000000000004 /* StatusIconRenderer.swift in Sources */,
 				A10000000000000000000010 /* SystemActions.swift in Sources */,
 				A10000000000000000000015 /* WiFiDialogs.swift in Sources */,
+				A10000000000000000000017 /* StatusControlCenterModel.swift in Sources */,
+				A10000000000000000000018 /* StatusControlCenterView.swift in Sources */,
+				A10000000000000000000019 /* StatusPanelController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
