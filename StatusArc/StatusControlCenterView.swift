@@ -227,25 +227,9 @@ struct StatusControlCenterView: View {
                     Divider()
                     VStack(spacing: 2) {
                         ForEach(model.inputSources) { source in
-                            Button {
+                            InputSourceSelectionRow(source: source) {
                                 if !source.isCurrent { model.selectInputSource?(source.id) }
-                            } label: {
-                                HStack(spacing: 11) {
-                                    Text(source.label)
-                                        .font(.system(size: 12, weight: .semibold))
-                                        .frame(width: 28, height: 22)
-                                        .background(.white, in: RoundedRectangle(cornerRadius: 5))
-                                    Text(source.name)
-                                    Spacer()
-                                    if source.isCurrent {
-                                        Image(systemName: "checkmark")
-                                    }
-                                }
-                                .contentShape(Rectangle())
                             }
-                            .buttonStyle(.plain)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 6)
                         }
                     }
 
@@ -272,6 +256,49 @@ struct StatusControlCenterView: View {
         withAnimation(reduceMotion ? nil : StatusMotion.expansion) {
             model.toggle(island)
         }
+    }
+}
+
+private struct InputSourceSelectionRow: View {
+    let source: StatusInputSourceRow
+    let action: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 11) {
+                Text(source.label)
+                    .font(.system(size: 12, weight: .semibold))
+                    .frame(width: 28, height: 22)
+                    .background(.white, in: RoundedRectangle(cornerRadius: 5))
+                Text(source.name)
+                Spacer()
+                if source.isCurrent {
+                    Image(systemName: "checkmark")
+                }
+            }
+            .contentShape(Rectangle())
+            .padding(.horizontal, 7)
+            .padding(.vertical, 6)
+        }
+        .buttonStyle(.plain)
+        .background(
+            isHovered ? Color.primary.opacity(0.085) : .clear,
+            in: RoundedRectangle(cornerRadius: 10)
+        )
+        .overlay {
+            if isHovered {
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(.white.opacity(0.12), lineWidth: 0.7)
+            }
+        }
+        .onHover { hovered in
+            withAnimation(reduceMotion ? nil : StatusMotion.hover) {
+                isHovered = hovered
+            }
+        }
+        .accessibilityValue(source.isCurrent ? "Selected" : "Not selected")
     }
 }
 
