@@ -108,8 +108,8 @@ menu label rather than claiming active charging.
 - Configure at least two input sources in macOS.
 - Switch them using StatusArc.
 - Confirm the center label updates to match the current macOS input source.
-- Confirm one- and two-letter labels have matching optical vertical alignment
-  and remain clearly readable at normal menu-bar size.
+- Confirm one- and two-letter labels both use 9.5-point type, have matching
+  optical vertical alignment, and remain readable at normal menu-bar size.
 - Confirm ASCII sources use a compact system-name label and non-ASCII sources
   use the native language name rather than a fixed country-code mapping.
 - Confirm each submenu item, the parent item, tooltip, and accessibility value use the source's full localized system name.
@@ -129,9 +129,15 @@ menu label rather than claiming active charging.
 - Confirm Battery shows its percentage, power state, power source, and the
   current public Energy Mode state. Confirm read-only Energy Mode choices are
   disabled rather than pretending to change protected system state.
+- Confirm all three Energy Mode rows show circular battery symbols and the
+  current public mode uses the accented state.
+- On macOS 26 or later, confirm custom control surfaces use Liquid Glass. On
+  macOS 13–15, confirm they use the semantic menu material with readable text.
+- Move repeatedly between the three component submenus. Confirm no Wi-Fi scan
+  begins on open and no submenu reconstruction interrupts pointer tracking.
 - Confirm Battery Settings, Network Settings, Keyboard Settings, Emoji &
   Symbols, and Wireless Diagnostics invoke the available public system actions.
-- Confirm no custom view attempts to reproduce a Control Center panel.
+- Confirm custom surfaces use only public AppKit materials and controls.
 
 ## Settings shortcuts
 

@@ -64,7 +64,9 @@ interface reported by macOS instead of blindly preferring one.
 ## Features
 
 Clicking the StatusArc icon opens a standard macOS menu with separate Battery,
-Connectivity, and Input Source submenus.
+Connectivity, and Input Source submenus. The menu adopts the system appearance;
+its custom summary and Wi-Fi controls use Liquid Glass when macOS provides it
+and the semantic menu material on earlier supported versions.
 
 **Battery**
 - Current battery percentage
@@ -72,6 +74,7 @@ Connectivity, and Input Source submenus.
 - Current power source
 - Time remaining when macOS provides it
 - Current Automatic or Low Power energy-mode state
+- Circular native battery symbols for Automatic, Low Power, and High Power
 - Shortcut to energy details in Activity Monitor
 - Shortcut to Battery Settings
 

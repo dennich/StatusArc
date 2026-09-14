@@ -251,7 +251,7 @@ final class StatusIconRenderer {
         color: NSColor
     ) {
         let font = NSFont.monospacedSystemFont(
-            ofSize: label.count == 1 ? 11 : 10,
+            ofSize: 9.5,
             weight: .semibold
         )
         let attributes: [NSAttributedString.Key: Any] = [

@@ -2,24 +2,78 @@ import AppKit
 import Carbon
 import CoreWLAN
 
+private enum EnergyModeVisual {
+    case automatic, lowPower, highPower
+}
+
+private final class ControlCenterMenuSurface: NSView {
+    let content = NSView()
+
+    init(frame: NSRect, interactive: Bool) {
+        super.init(frame: frame)
+
+        let background: NSView
+        if #available(macOS 26.0, *) {
+            let glass = NSGlassEffectView(frame: bounds)
+            glass.cornerRadius = 10
+            glass.style = .regular
+            glass.tintColor = NSColor.controlAccentColor.withAlphaComponent(0.06)
+            if #available(macOS 27.0, *) {
+                glass.effectIsInteractive = interactive
+            }
+            content.frame = glass.bounds
+            content.autoresizingMask = [.width, .height]
+            glass.contentView = content
+            background = glass
+        } else {
+            let visualEffect = NSVisualEffectView(frame: bounds)
+            visualEffect.material = .menu
+            visualEffect.blendingMode = .withinWindow
+            visualEffect.state = .followsWindowActiveState
+            visualEffect.wantsLayer = true
+            visualEffect.layer?.cornerRadius = 10
+            visualEffect.layer?.masksToBounds = true
+            content.frame = visualEffect.bounds
+            content.autoresizingMask = [.width, .height]
+            visualEffect.addSubview(content)
+            background = visualEffect
+        }
+
+        background.frame = bounds
+        background.autoresizingMask = [.width, .height]
+        addSubview(background)
+    }
+
+    required init?(coder: NSCoder) {
+        nil
+    }
+}
+
 private final class WiFiMenuControlView: NSView {
     let toggle = NSSwitch()
     private let label = NSTextField(labelWithString: "Wi-Fi")
 
     init() {
-        super.init(frame: NSRect(x: 0, y: 0, width: 280, height: 36))
+        super.init(frame: NSRect(x: 0, y: 0, width: 280, height: 40))
+
+        let surface = ControlCenterMenuSurface(
+            frame: bounds.insetBy(dx: 4, dy: 2),
+            interactive: true
+        )
+        surface.autoresizingMask = [.width, .height]
+        addSubview(surface)
 
         label.font = .systemFont(ofSize: NSFont.systemFontSize, weight: .semibold)
         label.translatesAutoresizingMaskIntoConstraints = false
         toggle.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(label)
-        addSubview(toggle)
+        surface.content.addSubview(label)
+        surface.content.addSubview(toggle)
 
         NSLayoutConstraint.activate([
-            label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
-            label.centerYAnchor.constraint(equalTo: centerYAnchor),
-            toggle.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
-            toggle.centerYAnchor.constraint(equalTo: centerYAnchor)
+            label.leadingAnchor.constraint(equalTo: surface.content.leadingAnchor, constant: 10),
+            label.centerYAnchor.constraint(equalTo: surface.content.centerYAnchor),
+            toggle.trailingAnchor.constraint(equalTo: surface.content.trailingAnchor, constant: -10),
+            toggle.centerYAnchor.constraint(equalTo: surface.content.centerYAnchor)
         ])
     }
 
@@ -40,21 +94,28 @@ private final class BatterySummaryMenuView: NSView {
     private let percentageLabel = NSTextField(labelWithString: "—")
 
     init() {
-        super.init(frame: NSRect(x: 0, y: 0, width: 280, height: 32))
+        super.init(frame: NSRect(x: 0, y: 0, width: 280, height: 38))
+
+        let surface = ControlCenterMenuSurface(
+            frame: bounds.insetBy(dx: 4, dy: 2),
+            interactive: false
+        )
+        surface.autoresizingMask = [.width, .height]
+        addSubview(surface)
 
         titleLabel.font = .systemFont(ofSize: NSFont.systemFontSize, weight: .semibold)
         percentageLabel.font = .systemFont(ofSize: NSFont.systemFontSize)
         percentageLabel.textColor = .secondaryLabelColor
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         percentageLabel.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(titleLabel)
-        addSubview(percentageLabel)
+        surface.content.addSubview(titleLabel)
+        surface.content.addSubview(percentageLabel)
 
         NSLayoutConstraint.activate([
-            titleLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
-            titleLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
-            percentageLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
-            percentageLabel.centerYAnchor.constraint(equalTo: centerYAnchor)
+            titleLabel.leadingAnchor.constraint(equalTo: surface.content.leadingAnchor, constant: 10),
+            titleLabel.centerYAnchor.constraint(equalTo: surface.content.centerYAnchor),
+            percentageLabel.trailingAnchor.constraint(equalTo: surface.content.trailingAnchor, constant: -10),
+            percentageLabel.centerYAnchor.constraint(equalTo: surface.content.centerYAnchor)
         ])
     }
 
@@ -283,14 +344,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         refresh()
         updateApplicationMenu()
         rebuildInputSourcesMenu()
-        rebuildWiFiDetailsMenu()
-        rebuildWiFiNetworksMenu(using: actions.cachedWiFiNetworks())
-
-        // Once Location access has been granted, behave more like Apple's
-        // Wi-Fi menu and refresh the nearby list automatically.
-        if actions.locationAccess == .allowed && actions.wifiPowerOn {
-            scanNearbyNetworks(requestPermission: false, showErrors: false)
+        if optionPressed {
+            rebuildWiFiDetailsMenu()
         }
+
+        // Do not start scans or rebuild tracked Connectivity submenus here.
+        // Mutating a menu during pointer tracking makes moving between sibling
+        // submenus lag. Nearby-network scans remain explicit user actions.
     }
 
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
@@ -394,18 +454,91 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
             batteryPowerItem.title = "Power Source: \(battery.powerSource)"
             batteryMenuItem.title = "Battery: \(percent)%"
             batterySummaryView.update(percentage: percent)
-            automaticEnergyModeItem.state = battery.isLowPowerModeEnabled ? .off : .on
-            lowPowerEnergyModeItem.state = battery.isLowPowerModeEnabled ? .on : .off
-            highPowerEnergyModeItem.state = .off
+            updateEnergyModeVisuals(lowPowerModeEnabled: battery.isLowPowerModeEnabled)
         } else {
             batteryItem.title = "Battery: Not available"
             batteryPowerItem.title = "Power Source: —"
             batteryMenuItem.title = "Battery"
             batterySummaryView.update(percentage: nil)
-            automaticEnergyModeItem.state = .off
-            lowPowerEnergyModeItem.state = .off
-            highPowerEnergyModeItem.state = .off
+            updateEnergyModeVisuals(lowPowerModeEnabled: nil)
         }
+    }
+
+    private func updateEnergyModeVisuals(lowPowerModeEnabled: Bool?) {
+        let modes: [(NSMenuItem, EnergyModeVisual, Bool)] = [
+            (automaticEnergyModeItem, .automatic, lowPowerModeEnabled == false),
+            (lowPowerEnergyModeItem, .lowPower, lowPowerModeEnabled == true),
+            (highPowerEnergyModeItem, .highPower, false)
+        ]
+
+        for (item, mode, selected) in modes {
+            item.image = energyModeImage(mode, selected: selected)
+            item.state = .off
+            item.setAccessibilityValue(selected ? "Selected" : "Not selected")
+        }
+    }
+
+    private func energyModeImage(
+        _ mode: EnergyModeVisual,
+        selected: Bool
+    ) -> NSImage {
+        let symbolNames: [String]
+        switch mode {
+        case .automatic:
+            symbolNames = ["battery.100percent", "battery.100"]
+        case .lowPower:
+            symbolNames = ["battery.25percent", "battery.25"]
+        case .highPower:
+            symbolNames = ["battery.100percent.bolt", "battery.100.bolt"]
+        }
+
+        let size = NSSize(width: 28, height: 28)
+        let image = NSImage(size: size, flipped: false) { rect in
+            let circle = rect.insetBy(dx: 2, dy: 2)
+            let fill = selected
+                ? NSColor.controlAccentColor
+                : NSColor.tertiaryLabelColor.withAlphaComponent(0.42)
+            fill.setFill()
+            NSBezierPath(ovalIn: circle).fill()
+
+            guard let baseSymbol = symbolNames.lazy.compactMap({
+                NSImage(systemSymbolName: $0, accessibilityDescription: nil)
+            }).first else {
+                return true
+            }
+
+            let foreground = selected ? NSColor.white : NSColor.secondaryLabelColor
+            let configuration = NSImage.SymbolConfiguration(pointSize: 12, weight: .medium)
+                .applying(.init(paletteColors: [foreground]))
+            guard let symbol = baseSymbol.withSymbolConfiguration(configuration),
+                  symbol.size.width > 0, symbol.size.height > 0 else {
+                return true
+            }
+
+            let maximum = NSSize(width: 16, height: 11)
+            let scale = min(
+                maximum.width / symbol.size.width,
+                maximum.height / symbol.size.height
+            )
+            let symbolSize = NSSize(
+                width: symbol.size.width * scale,
+                height: symbol.size.height * scale
+            )
+            symbol.draw(
+                in: NSRect(
+                    x: rect.midX - symbolSize.width / 2,
+                    y: rect.midY - symbolSize.height / 2,
+                    width: symbolSize.width,
+                    height: symbolSize.height
+                ),
+                from: .zero,
+                operation: .sourceOver,
+                fraction: 1
+            )
+            return true
+        }
+        image.isTemplate = false
+        return image
     }
 
     private func updateNetworkMenu(_ snapshot: StatusSnapshot) {

@@ -26,8 +26,14 @@ is insufficient.
 The public menu API also does not expose Control Center's custom header rows.
 StatusArc uses small AppKit menu-item views only where an actual native control
 is available: a battery summary header and an `NSSwitch` backed by CoreWLAN for
-Wi-Fi power. Other rows remain standard `NSMenuItem` objects so keyboard and
+Wi-Fi power. On macOS 26 and later these views use the public
+`NSGlassEffectView`; earlier supported versions use the semantic AppKit menu
+material. Other rows remain standard `NSMenuItem` objects so keyboard and
 accessibility behavior stay native.
+
+Menu opening never starts a Wi-Fi scan or rebuilds a tracked Connectivity
+submenu. Nearby-network scans remain explicit user actions so asynchronous
+results cannot disrupt pointer tracking between sibling submenus.
 
 The public menu API also does not expose Apple's embedded Wi-Fi toggle row or
 the trailing details button from the system status menu. On macOS 13, StatusArc
