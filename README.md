@@ -70,7 +70,7 @@ Clicking the StatusArc icon opens a combined controls menu.
 - Disconnect from the current Wi-Fi network
 - Scan nearby Wi-Fi networks
 - Join open and personal Wi-Fi networks
-- Use a saved Wi-Fi password from the macOS keychain when available
+- Use a saved Wi-Fi password from the user keychain when available
 - Join another/unlisted network
 - Connection details such as RSSI, noise, channel, transmit rate, and interface
 - Open Wireless Diagnostics
@@ -133,8 +133,10 @@ names. StatusArc requests Location access only when you ask it to scan nearby
 Wi-Fi networks. The app does not request or use geographic coordinates.
 
 **Keychain access:** when joining a secured Wi-Fi network, StatusArc may ask
-CoreWLAN for the saved password for that SSID. The password is used only for the
-association attempt and is not logged or stored by StatusArc.
+CoreWLAN for the saved password for that SSID from the user keychain. It does
+not query the System keychain or request administrator access. If no saved
+password is available, StatusArc asks you to enter it. The password is used only
+for the association attempt and is not logged or stored by StatusArc.
 
 See [PRIVACY.md](PRIVACY.md) for more detail.
 

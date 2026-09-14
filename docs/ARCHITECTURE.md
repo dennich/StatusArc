@@ -28,7 +28,7 @@ It returns a `StatusSnapshot` used by both the renderer and menu.
 Contains user-triggered actions:
 
 - Wi-Fi power, scan, disconnect, and association;
-- optional retrieval of a saved Wi-Fi password through CoreWLAN keychain APIs;
+- optional retrieval of a saved Wi-Fi password from the user keychain through CoreWLAN;
 - input-source enumeration and selection;
 - local connection details.
 

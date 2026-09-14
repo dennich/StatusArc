@@ -570,7 +570,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         var password: String?
 
         if !actions.isOpenNetwork(network) {
-            password = actions.savedPassword(for: network)
+            password = actions.savedUserPassword(for: network)
 
             if password == nil {
                 guard let ssid = network.ssid else { return }
@@ -655,7 +655,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
                     var password = suppliedPassword
                     if !self.actions.isOpenNetwork(network), password == nil {
-                        guard let resolvedPassword = self.actions.savedPassword(for: network)
+                        guard let resolvedPassword = self.actions.savedUserPassword(for: network)
                             ?? self.askForPassword(networkName: name) else {
                             return
                         }

@@ -171,26 +171,19 @@ final class SystemActions: NSObject, CLLocationManagerDelegate {
         }
     }
 
-    func savedPassword(for network: CWNetwork) -> String? {
+    func savedUserPassword(for network: CWNetwork) -> String? {
         guard let ssidData = network.ssidData else {
             return nil
         }
 
         var password: NSString?
 
-        if CWKeychainFindWiFiPassword(.user, ssidData, &password) == noErr,
-           let password {
-            return password as String
+        guard CWKeychainFindWiFiPassword(.user, ssidData, &password) == noErr,
+              let password else {
+            return nil
         }
 
-        password = nil
-
-        if CWKeychainFindWiFiPassword(.system, ssidData, &password) == noErr,
-           let password {
-            return password as String
-        }
-
-        return nil
+        return password as String
     }
 
     func isOpenNetwork(_ network: CWNetwork) -> Bool {

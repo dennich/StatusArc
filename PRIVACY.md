@@ -45,14 +45,15 @@ Wi-Fi network names may not be available.
 ### Wi-Fi passwords
 
 For a secured personal Wi-Fi network, StatusArc can ask CoreWLAN for an
-existing saved password in the macOS keychain. This is used only to attempt the
-requested association.
+existing saved password in the user keychain. StatusArc does not query the
+System keychain or request administrator access. If no saved password is
+available, StatusArc asks you to enter it. The password is used only to attempt
+the requested association.
 
 StatusArc does not log the password, save a separate copy, upload it, or expose
 it in the menu.
 
-macOS remains responsible for keychain access control and may show its own
-authorization prompts.
+macOS remains responsible for access control for items in the user keychain.
 
 ## Keyboard input source
 

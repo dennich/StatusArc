@@ -4,6 +4,9 @@ All notable user-visible changes to StatusArc are documented here.
 
 ## [Unreleased]
 
+### Changed
+- Wi-Fi joins now check only the user keychain for saved passwords. If none is available, StatusArc asks for the password without requesting administrator access to the System keychain.
+
 ## [1.2.0] - 2026-09-12
 
 ### Changed

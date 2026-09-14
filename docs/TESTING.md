@@ -58,6 +58,8 @@ plan is primarily manual.
 - If prompted, test both granting and denying Location access.
 - Join an open network if one is safely available.
 - Join a secured personal network.
+- Confirm a secured-network join does not show a System keychain administrator prompt.
+- If no user-keychain password is available, confirm StatusArc asks for the Wi-Fi password.
 - Confirm no password is printed to the Xcode console.
 - Open Connection Details and Wireless Diagnostics.
 
