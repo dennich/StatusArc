@@ -68,7 +68,6 @@ struct StatusControlCenterView: View {
     ) -> some View {
         let shape = RoundedRectangle(cornerRadius: expanded ? 24 : 30, style: .continuous)
         let base = content()
-            .padding(expanded ? 18 : 14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(shape)
 
@@ -87,7 +86,7 @@ struct StatusControlCenterView: View {
     }
 
     private var batteryContent: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 0) {
             IslandHeader(
                 symbol: "battery.100",
                 title: "Battery",
@@ -98,46 +97,50 @@ struct StatusControlCenterView: View {
             )
 
             if model.expandedIsland == .battery {
-                Divider()
-                LabeledContent("Power Source", value: model.powerSource)
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 14) {
+                    Divider()
+                    LabeledContent("Power Source", value: model.powerSource)
+                        .foregroundStyle(.secondary)
 
-                VStack(alignment: .leading, spacing: 9) {
-                    Text("Energy Mode")
-                        .font(.headline)
-                    EnergyModeRow(
-                        title: "Automatic",
-                        symbol: "battery.100",
-                        selected: model.lowPowerModeEnabled == false,
-                        action: nil
-                    )
-                    EnergyModeRow(
-                        title: "Low Power",
-                        symbol: "battery.25",
-                        selected: model.lowPowerModeEnabled == true,
-                        action: nil
-                    )
-                    EnergyModeRow(
-                        title: "High Power",
-                        symbol: "battery.100.bolt",
-                        selected: false,
-                        action: nil
-                    )
-                }
+                    VStack(alignment: .leading, spacing: 9) {
+                        Text("Energy Mode")
+                            .font(.headline)
+                        EnergyModeRow(
+                            title: "Automatic",
+                            symbol: "battery.100",
+                            selected: model.lowPowerModeEnabled == false,
+                            action: nil
+                        )
+                        EnergyModeRow(
+                            title: "Low Power",
+                            symbol: "battery.25",
+                            selected: model.lowPowerModeEnabled == true,
+                            action: nil
+                        )
+                        EnergyModeRow(
+                            title: "High Power",
+                            symbol: "battery.100.bolt",
+                            selected: false,
+                            action: nil
+                        )
+                    }
 
-                Divider()
-                ActionRow(title: "Energy Usage in Activity Monitor…", symbol: "gauge.with.dots.needle.67percent") {
-                    model.openActivityMonitor?()
+                    Divider()
+                    ActionRow(title: "Energy Usage in Activity Monitor…", symbol: "gauge.with.dots.needle.67percent") {
+                        model.openActivityMonitor?()
+                    }
+                    ActionRow(title: "Battery Settings…", symbol: "gear") {
+                        model.openBatterySettings?()
+                    }
                 }
-                ActionRow(title: "Battery Settings…", symbol: "gear") {
-                    model.openBatterySettings?()
-                }
+                .padding(.horizontal, 18)
+                .padding(.bottom, 18)
             }
         }
     }
 
     private var connectivityContent: some View {
-        VStack(alignment: .leading, spacing: 13) {
+        VStack(alignment: .leading, spacing: 0) {
             IslandHeader(
                 symbol: "wifi",
                 title: model.networkTitle,
@@ -153,59 +156,63 @@ struct StatusControlCenterView: View {
             )
 
             if model.expandedIsland == .connectivity {
-                Divider()
+                VStack(alignment: .leading, spacing: 13) {
+                    Divider()
 
-                if model.networks.isEmpty {
-                    Text(model.wifiBusy ? "Scanning…" : "No nearby networks")
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, minHeight: 46)
-                } else {
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 4) {
-                            NetworkSection(
-                                title: "Known Networks",
-                                networks: model.networks.filter { $0.isKnown || $0.isCurrent },
-                                connect: model.connectNetwork
-                            )
-                            NetworkSection(
-                                title: "Other Networks",
-                                networks: model.networks.filter { !$0.isKnown && !$0.isCurrent },
-                                connect: model.connectNetwork
-                            )
+                    if model.networks.isEmpty {
+                        Text(model.wifiBusy ? "Scanning…" : "No nearby networks")
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, minHeight: 46)
+                    } else {
+                        ScrollView {
+                            LazyVStack(alignment: .leading, spacing: 4) {
+                                NetworkSection(
+                                    title: "Known Networks",
+                                    networks: model.networks.filter { $0.isKnown || $0.isCurrent },
+                                    connect: model.connectNetwork
+                                )
+                                NetworkSection(
+                                    title: "Other Networks",
+                                    networks: model.networks.filter { !$0.isKnown && !$0.isCurrent },
+                                    connect: model.connectNetwork
+                                )
+                            }
+                        }
+                        .frame(maxHeight: 226)
+                    }
+
+                    HStack {
+                        Button("Refresh") { model.scanNetworks?() }
+                            .disabled(model.wifiBusy || !model.wifiOn)
+                        Button("Other Network…") { model.joinOtherNetwork?() }
+                            .disabled(model.wifiBusy || !model.wifiOn)
+                        Spacer()
+                        if model.currentSSID != nil {
+                            Button("Disconnect") { model.disconnectWiFi?() }
+                                .disabled(model.wifiBusy)
                         }
                     }
-                    .frame(maxHeight: 226)
-                }
+                    .controlSize(.small)
 
-                HStack {
-                    Button("Refresh") { model.scanNetworks?() }
-                        .disabled(model.wifiBusy || !model.wifiOn)
-                    Button("Other Network…") { model.joinOtherNetwork?() }
-                        .disabled(model.wifiBusy || !model.wifiOn)
-                    Spacer()
-                    if model.currentSSID != nil {
-                        Button("Disconnect") { model.disconnectWiFi?() }
-                            .disabled(model.wifiBusy)
+                    Divider()
+                    ActionRow(title: "Network Settings…", symbol: "network") {
+                        model.openNetworkSettings?()
+                    }
+                    ActionRow(title: "Wi-Fi Settings…", symbol: "wifi") {
+                        model.openWiFiSettings?()
+                    }
+                    ActionRow(title: "Wireless Diagnostics…", symbol: "wave.3.right.circle") {
+                        model.openWirelessDiagnostics?()
                     }
                 }
-                .controlSize(.small)
-
-                Divider()
-                ActionRow(title: "Network Settings…", symbol: "network") {
-                    model.openNetworkSettings?()
-                }
-                ActionRow(title: "Wi-Fi Settings…", symbol: "wifi") {
-                    model.openWiFiSettings?()
-                }
-                ActionRow(title: "Wireless Diagnostics…", symbol: "wave.3.right.circle") {
-                    model.openWirelessDiagnostics?()
-                }
+                .padding(.horizontal, 18)
+                .padding(.bottom, 18)
             }
         }
     }
 
     private var inputSourceContent: some View {
-        VStack(alignment: .leading, spacing: 13) {
+        VStack(alignment: .leading, spacing: 0) {
             IslandHeader(
                 symbol: "keyboard",
                 title: "Input Source",
@@ -216,43 +223,47 @@ struct StatusControlCenterView: View {
             )
 
             if model.expandedIsland == .inputSource {
-                Divider()
-                VStack(spacing: 2) {
-                    ForEach(model.inputSources) { source in
-                        Button {
-                            if !source.isCurrent { model.selectInputSource?(source.id) }
-                        } label: {
-                            HStack(spacing: 11) {
-                                Text(source.label)
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .frame(width: 28, height: 22)
-                                    .background(.white, in: RoundedRectangle(cornerRadius: 5))
-                                Text(source.name)
-                                Spacer()
-                                if source.isCurrent {
-                                    Image(systemName: "checkmark")
+                VStack(alignment: .leading, spacing: 13) {
+                    Divider()
+                    VStack(spacing: 2) {
+                        ForEach(model.inputSources) { source in
+                            Button {
+                                if !source.isCurrent { model.selectInputSource?(source.id) }
+                            } label: {
+                                HStack(spacing: 11) {
+                                    Text(source.label)
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .frame(width: 28, height: 22)
+                                        .background(.white, in: RoundedRectangle(cornerRadius: 5))
+                                    Text(source.name)
+                                    Spacer()
+                                    if source.isCurrent {
+                                        Image(systemName: "checkmark")
+                                    }
                                 }
+                                .contentShape(Rectangle())
                             }
-                            .contentShape(Rectangle())
+                            .buttonStyle(.plain)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 6)
                         }
-                        .buttonStyle(.plain)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 6)
+                    }
+
+                    Divider()
+                    ActionRow(title: "Show Emoji & Symbols", symbol: "character.book.closed") {
+                        model.showEmojiAndSymbols?()
+                    }
+                    ActionRow(title: "Show Keyboard Viewer", symbol: "keyboard") {
+                        model.showKeyboardViewer?()
+                    }
+                    .disabled(!model.keyboardViewerAvailable)
+                    Divider()
+                    ActionRow(title: "Keyboard Settings…", symbol: "gear") {
+                        model.openKeyboardSettings?()
                     }
                 }
-
-                Divider()
-                ActionRow(title: "Show Emoji & Symbols", symbol: "character.book.closed") {
-                    model.showEmojiAndSymbols?()
-                }
-                ActionRow(title: "Show Keyboard Viewer", symbol: "keyboard") {
-                    model.showKeyboardViewer?()
-                }
-                .disabled(!model.keyboardViewerAvailable)
-                Divider()
-                ActionRow(title: "Keyboard Settings…", symbol: "gear") {
-                    model.openKeyboardSettings?()
-                }
+                .padding(.horizontal, 18)
+                .padding(.bottom, 18)
             }
         }
     }
@@ -277,7 +288,9 @@ private struct IslandHeader: View {
     let action: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
+        let inset: CGFloat = expanded ? 18 : 14
+
+        ZStack(alignment: .trailing) {
             Button(action: action) {
                 HStack(spacing: 12) {
                     Group {
@@ -313,8 +326,13 @@ private struct IslandHeader: View {
                     Image(systemName: expanded ? "chevron.up" : "chevron.down")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.tertiary)
+
+                    if showsToggle, toggle != nil {
+                        Color.clear.frame(width: 48, height: 1)
+                    }
                 }
                 .frame(maxWidth: .infinity)
+                .padding(inset)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -323,7 +341,8 @@ private struct IslandHeader: View {
             if showsToggle, let toggle {
                 Toggle("", isOn: toggle)
                     .labelsHidden()
-                .disabled(toggleDisabled)
+                    .disabled(toggleDisabled)
+                    .padding(.trailing, inset)
             }
         }
         .frame(maxWidth: .infinity)

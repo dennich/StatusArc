@@ -350,7 +350,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         controlCenterModel.selectInputSource = { [weak self] index in
             guard let self else { return }
             self.selectInputSource(at: index)
-            self.panelController?.requestClose()
         }
         controlCenterModel.showEmojiAndSymbols = { [weak self] in
             self?.performPanelAction { $0.showEmojiAndSymbols() }
