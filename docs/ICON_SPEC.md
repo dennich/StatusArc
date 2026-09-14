@@ -44,7 +44,8 @@ governed by an exactly-two-letters rule.
 
 The menu, tooltip, and accessibility value use the complete localized system
 source name from `kTISPropertyLocalizedName`. Keep the compact label visually
-centered and readable at normal menu-bar size.
+centered and readable at normal menu-bar size. Center the visible glyph outlines
+on the composite icon's vertical axis so one- and two-letter labels do not shift.
 
 ## 3. Network — bottom
 

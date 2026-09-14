@@ -1,4 +1,5 @@
 import AppKit
+import CoreText
 
 final class StatusIconRenderer {
     // Trim only transparent outer margins; the artwork keeps its original geometry.
@@ -89,7 +90,8 @@ final class StatusIconRenderer {
 
             self.drawInputSourceLabel(
                 snapshot.inputSourceLabel,
-                in: compositeRect,
+                in: context,
+                rect: compositeRect,
                 color: bright
             )
 
@@ -244,31 +246,33 @@ final class StatusIconRenderer {
 
     private func drawInputSourceLabel(
         _ label: String,
-        in rect: NSRect,
+        in context: CGContext,
+        rect: NSRect,
         color: NSColor
     ) {
         let font = NSFont.monospacedSystemFont(
-            ofSize: label.count == 1 ? 9 : 8.2,
+            ofSize: label.count == 1 ? 11 : 10,
             weight: .semibold
         )
-
-        let paragraph = NSMutableParagraphStyle()
-        paragraph.alignment = .center
-
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
-            .foregroundColor: color,
-            .paragraphStyle: paragraph
+            .foregroundColor: color
         ]
-
-        let textRect = NSRect(
-            x: rect.minX + 4,
-            y: 6.1,
-            width: rect.width - 8,
-            height: 10
+        let line = CTLineCreateWithAttributedString(
+            NSAttributedString(string: label, attributes: attributes)
         )
+        let glyphBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
 
-        (label as NSString).draw(in: textRect, withAttributes: attributes)
+        // Center the visible glyph outlines rather than the font's line box.
+        // This keeps one- and two-letter identities on the same optical axis.
+        context.saveGState()
+        context.textMatrix = .identity
+        context.textPosition = CGPoint(
+            x: rect.midX - glyphBounds.midX,
+            y: rect.midY - glyphBounds.midY
+        )
+        CTLineDraw(line, context)
+        context.restoreGState()
     }
 
     private func drawNetworkIndicator(

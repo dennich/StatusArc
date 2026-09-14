@@ -108,6 +108,8 @@ menu label rather than claiming active charging.
 - Configure at least two input sources in macOS.
 - Switch them using StatusArc.
 - Confirm the center label updates to match the current macOS input source.
+- Confirm one- and two-letter labels have matching optical vertical alignment
+  and remain clearly readable at normal menu-bar size.
 - Confirm ASCII sources use a compact system-name label and non-ASCII sources
   use the native language name rather than a fixed country-code mapping.
 - Confirm each submenu item, the parent item, tooltip, and accessibility value use the source's full localized system name.
