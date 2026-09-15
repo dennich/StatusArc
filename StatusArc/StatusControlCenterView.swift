@@ -103,26 +103,62 @@ struct StatusControlCenterView: View {
                         .foregroundStyle(.secondary)
 
                     VStack(alignment: .leading, spacing: 9) {
-                        Text("Energy Mode")
-                            .font(.headline)
-                        EnergyModeRow(
-                            title: "Automatic",
-                            symbol: "battery.100",
-                            selected: model.lowPowerModeEnabled == false,
-                            action: nil
-                        )
-                        EnergyModeRow(
-                            title: "Low Power",
-                            symbol: "battery.25",
-                            selected: model.lowPowerModeEnabled == true,
-                            action: nil
-                        )
-                        EnergyModeRow(
-                            title: "High Power",
-                            symbol: "battery.100.bolt",
-                            selected: false,
-                            action: nil
-                        )
+                        HStack {
+                            Text("Energy Mode")
+                                .font(.headline)
+                            Spacer()
+                            if model.energyModeChanging {
+                                ProgressView()
+                                    .controlSize(.small)
+                            }
+                        }
+
+                        if !model.energyModeCapabilitiesKnown {
+                            ProgressView()
+                                .controlSize(.small)
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                        } else if model.supportsLowPowerMode {
+                            EnergyModeRow(
+                                title: "Automatic",
+                                symbol: "battery.100",
+                                selected: model.energyMode == .automatic,
+                                action: model.energyModeChanging ? nil : {
+                                    model.selectEnergyMode?(.automatic)
+                                }
+                            )
+                            EnergyModeRow(
+                                title: "Low Power",
+                                symbol: "battery.25",
+                                selected: model.energyMode == .lowPower,
+                                action: model.energyModeChanging ? nil : {
+                                    model.selectEnergyMode?(.lowPower)
+                                }
+                            )
+                            if model.supportsHighPowerMode {
+                                EnergyModeRow(
+                                    title: "High Power",
+                                    symbol: "battery.100.bolt",
+                                    selected: model.energyMode == .highPower,
+                                    action: model.energyModeChanging ? nil : {
+                                        model.selectEnergyMode?(.highPower)
+                                    }
+                                )
+                            }
+                        } else {
+                            Text("Energy Mode is not available on this Mac.")
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                                .padding(.vertical, 6)
+                        }
+
+                        if model.powerModeControlState == .requiresApproval {
+                            ActionRow(
+                                title: "Allow Energy Mode Control…",
+                                symbol: "lock.open"
+                            ) {
+                                model.openEnergyModeApproval?()
+                            }
+                        }
                     }
 
                     Divider()

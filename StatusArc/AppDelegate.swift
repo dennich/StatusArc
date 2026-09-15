@@ -143,6 +143,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     private let actions = SystemActions()
     private let renderer = StatusIconRenderer()
     private let updateManager = UpdateManager()
+    private let powerModeController = PowerModeController()
     private let controlCenterModel = StatusControlCenterModel()
     private var panelController: StatusPanelController?
     private var expandedInterfaceDelegate: AnyObject?
@@ -187,6 +188,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         configureStatusItem()
         configureMenu()
         configureControlCenter()
+        powerModeController.start()
 
         updateManager.onUpdateAvailabilityChanged = { [weak self] _ in
             self?.updateApplicationMenu()
@@ -216,6 +218,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         fallbackRefreshTimer?.invalidate()
         appearanceObservation?.invalidate()
         monitor.stopMonitoring()
+        powerModeController.stop()
         iconAnimation?.stop()
         panelController?.hide(animated: false)
         updateManager.stop()
@@ -357,6 +360,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         controlCenterModel.showKeyboardViewer = { [weak self] in
             self?.performPanelAction { $0.showKeyboardViewer() }
         }
+        controlCenterModel.selectEnergyMode = { [weak self] mode in
+            self?.powerModeController.select(mode)
+        }
+        controlCenterModel.openEnergyModeApproval = { [weak self] in
+            self?.powerModeController.openApprovalSettings()
+        }
         controlCenterModel.openBatterySettings = { [weak self] in
             self?.performPanelAction { $0.openBatterySettings() }
         }
@@ -379,6 +388,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
             self?.performPanelAction { $0.updateManager.checkForUpdates() }
         }
         controlCenterModel.quit = { [weak self] in self?.quit() }
+
+        powerModeController.onStatusChange = { [weak self] status in
+            self?.controlCenterModel.updatePowerMode(status)
+        }
+        powerModeController.onError = { [weak self] error in
+            self?.showError(error, title: "Couldn’t Change Energy Mode")
+        }
 
         if #available(macOS 27.0, *) {
             let delegate = StatusExpandedInterfaceDelegate(panelController: controller)
@@ -465,6 +481,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     private func refresh() {
         reconcileWiFiOperation()
         let snapshot = monitor.snapshot()
+        if let battery = snapshot.battery {
+            powerModeController.setPowerSource(
+                battery.isConnectedToExternalPower ? .powerAdapter : .battery
+            )
+        }
+        powerModeController.refresh()
 
         updateStatusIcon(snapshot)
         statusItem.button?.toolTip = snapshot.tooltip

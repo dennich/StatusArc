@@ -31,6 +31,12 @@ final class StatusControlCenterModel: ObservableObject {
     @Published private(set) var batteryState = "Not available"
     @Published private(set) var powerSource = "—"
     @Published private(set) var lowPowerModeEnabled: Bool?
+    @Published private(set) var energyMode: EnergyMode?
+    @Published private(set) var energyModeCapabilitiesKnown = false
+    @Published private(set) var supportsLowPowerMode = false
+    @Published private(set) var supportsHighPowerMode = false
+    @Published private(set) var energyModeChanging = false
+    @Published private(set) var powerModeControlState: PowerModeControlState = .notConfigured
 
     @Published private(set) var networkTitle = "Connectivity"
     @Published private(set) var networkDetail = "Disconnected"
@@ -54,6 +60,8 @@ final class StatusControlCenterModel: ObservableObject {
     var selectInputSource: ((Int) -> Void)?
     var showEmojiAndSymbols: (() -> Void)?
     var showKeyboardViewer: (() -> Void)?
+    var selectEnergyMode: ((EnergyMode) -> Void)?
+    var openEnergyModeApproval: (() -> Void)?
     var openBatterySettings: (() -> Void)?
     var openActivityMonitor: (() -> Void)?
     var openWiFiSettings: (() -> Void)?
@@ -119,6 +127,15 @@ final class StatusControlCenterModel: ObservableObject {
         self.inputSources = inputSources
         self.keyboardViewerAvailable = keyboardViewerAvailable
         updateTitle = availableUpdate.map { "Update to \($0)…" } ?? "Check for Updates…"
+    }
+
+    func updatePowerMode(_ status: PowerModeStatus) {
+        energyMode = status.currentMode
+        energyModeCapabilitiesKnown = status.capabilitiesKnown
+        supportsLowPowerMode = status.supportsLowPowerMode
+        supportsHighPowerMode = status.supportsHighPowerMode
+        energyModeChanging = status.isChanging
+        powerModeControlState = status.controlState
     }
 
     private static func networkTitle(for status: NetworkStatus) -> String {
