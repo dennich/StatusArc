@@ -20,13 +20,16 @@ struct StatusControlCenterView: View {
         .frame(maxHeight: .infinity, alignment: .top)
     }
 
+    @ViewBuilder
     private var islandStack: some View {
         VStack(spacing: 10) {
-            ForEach(visibleIslands, id: \.self) { kind in
-                island(kind)
-            }
+            if let expandedIsland = model.expandedIsland {
+                expandedIslandView(expandedIsland)
+            } else {
+                compactIsland(.battery)
+                compactIsland(.connectivity)
+                compactIsland(.inputSource)
 
-            if model.expandedIsland == nil {
                 HStack(spacing: 8) {
                     Button(model.updateTitle) { model.checkForUpdates?() }
                     Spacer()
@@ -39,23 +42,57 @@ struct StatusControlCenterView: View {
         .frame(maxWidth: .infinity, alignment: .top)
     }
 
-    private var visibleIslands: [StatusIsland] {
-        if let expandedIsland = model.expandedIsland {
-            return [expandedIsland]
+    @ViewBuilder
+    private func compactIsland(_ kind: StatusIsland) -> some View {
+        islandSurface(kind, expanded: false) {
+            Button {
+                toggleIsland(kind)
+            } label: {
+                compactHeader(for: kind)
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Expands \(kind.accessibilityName) controls")
         }
-        return [.battery, .connectivity, .inputSource]
     }
 
     @ViewBuilder
-    private func island(_ kind: StatusIsland) -> some View {
-        let expanded = model.expandedIsland == kind
+    private func compactHeader(for kind: StatusIsland) -> some View {
         switch kind {
         case .battery:
-            islandSurface(kind, expanded: expanded) { batteryContent }
+            CompactIslandHeader(
+                symbol: "battery.100",
+                title: "Battery",
+                subtitle: model.batteryState,
+                trailing: model.batteryPercentage.map { "\($0)%" } ?? "—"
+            )
         case .connectivity:
-            islandSurface(kind, expanded: expanded) { connectivityContent }
+            CompactIslandHeader(
+                symbol: "wifi",
+                title: model.networkTitle,
+                subtitle: model.networkDetail
+            )
         case .inputSource:
-            islandSurface(kind, expanded: expanded) { inputSourceContent }
+            CompactIslandHeader(
+                symbol: "keyboard",
+                title: "Input Source",
+                subtitle: model.inputSourceName,
+                badge: model.inputSourceLabel
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func expandedIslandView(_ kind: StatusIsland) -> some View {
+        switch kind {
+        case .battery:
+            islandSurface(kind, expanded: true) { batteryContent }
+        case .connectivity:
+            islandSurface(kind, expanded: true) { connectivityContent }
+        case .inputSource:
+            islandSurface(kind, expanded: true) { inputSourceContent }
         }
     }
 
@@ -74,7 +111,7 @@ struct StatusControlCenterView: View {
             base
                 .glassEffect(.regular, in: shape)
                 .glassEffectID(kind.rawValue, in: glassNamespace)
-                .glassEffectTransition(reduceMotion ? .identity : .materialize)
+                .glassEffectTransition(reduceMotion ? .identity : .matchedGeometry)
         } else {
             base
                 .background(.regularMaterial, in: shape)
@@ -294,6 +331,62 @@ struct StatusControlCenterView: View {
     private func toggleIsland(_ island: StatusIsland) {
         withAnimation(reduceMotion ? nil : StatusMotion.expansion) {
             model.toggle(island)
+        }
+    }
+}
+
+private extension StatusIsland {
+    var accessibilityName: String {
+        switch self {
+        case .battery: return "battery"
+        case .connectivity: return "connectivity"
+        case .inputSource: return "input source"
+        }
+    }
+}
+
+private struct CompactIslandHeader: View {
+    let symbol: String
+    let title: String
+    let subtitle: String
+    var trailing: String? = nil
+    var badge: String? = nil
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Group {
+                if let badge {
+                    Text(badge)
+                        .font(.system(size: 15, weight: .bold))
+                } else {
+                    Image(systemName: symbol)
+                        .font(.system(size: 20, weight: .semibold))
+                        .symbolRenderingMode(.hierarchical)
+                }
+            }
+            .foregroundStyle(.tint)
+            .frame(width: 42, height: 42)
+            .background(.white, in: Circle())
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.headline)
+                Text(subtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 8)
+
+            if let trailing {
+                Text(trailing)
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
+
+            Image(systemName: "chevron.down")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
         }
     }
 }

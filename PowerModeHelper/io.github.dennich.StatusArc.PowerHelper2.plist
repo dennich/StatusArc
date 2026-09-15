@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>io.github.dennich.StatusArc.PowerHelper2</string>
+    <key>BundleProgram</key>
+    <string>Contents/MacOS/StatusArcPowerHelper</string>
+    <key>AssociatedBundleIdentifiers</key>
+    <array>
+        <string>io.github.dennich.StatusArc</string>
+    </array>
+    <key>MachServices</key>
+    <dict>
+        <key>io.github.dennich.StatusArc.PowerHelper2</key>
+        <true/>
+    </dict>
+    <key>ProcessType</key>
+    <string>Interactive</string>
+</dict>
+</plist>

@@ -55,9 +55,10 @@ final class PowerModeController {
     private var lastReadDate = Date.distantPast
     private var scheduledRead: DispatchWorkItem?
     private var helperRestartAttempts = 0
-    private var recoveredRegistrationThisLaunch = false
+    private var helperResponseTimeout: DispatchWorkItem?
 
     func start() {
+        unregisterLegacyServices()
         updateServiceState()
         refresh()
     }
@@ -67,6 +68,8 @@ final class PowerModeController {
         approvalTimer = nil
         scheduledRead?.cancel()
         scheduledRead = nil
+        helperResponseTimeout?.cancel()
+        helperResponseTimeout = nil
         connection?.invalidate()
         connection = nil
     }
@@ -294,6 +297,7 @@ final class PowerModeController {
     private func applyPendingMode() {
         guard let mode = pendingMode else { return }
         status.isChanging = true
+        startHelperResponseTimeout()
 
         prepareRunningHelperIfNeeded { [weak self] in
             guard let self else { return }
@@ -305,6 +309,7 @@ final class PowerModeController {
                 ) { [weak self] succeeded, message in
                     DispatchQueue.main.async {
                         guard let self else { return }
+                        self.cancelHelperResponseTimeout()
                         self.status.isChanging = false
 
                         if succeeded {
@@ -331,7 +336,9 @@ final class PowerModeController {
             let connection = try activeConnection()
             guard let proxy = connection.remoteObjectProxyWithErrorHandler({ [weak self] error in
                 DispatchQueue.main.async {
-                    self?.handleHelperCommunicationFailure(error)
+                    self?.connection?.invalidate()
+                    self?.connection = nil
+                    self?.fail(error)
                 }
             }) as? PowerModeHelperProtocol else {
                 throw PowerModeControllerError.message(
@@ -344,46 +351,41 @@ final class PowerModeController {
         }
     }
 
-    private func handleHelperCommunicationFailure(_ error: Error) {
-        logger.error("Energy Mode helper communication failed: \(error.localizedDescription, privacy: .public)")
-        connection?.invalidate()
-        connection = nil
-
-        // An ad-hoc debug build gets a new designated requirement each time it
-        // is rebuilt. A helper still running from the preceding build must not
-        // trust that new identity. Refreshing its SMAppService registration is
-        // the safe recovery path and preserves the pending user action.
-        guard pendingMode != nil,
-              service.status == .enabled,
-              !recoveredRegistrationThisLaunch else {
-            fail(error)
-            return
-        }
-
-        recoveredRegistrationThisLaunch = true
-        refreshServiceRegistration()
-    }
-
-    private func refreshServiceRegistration() {
-        status.isChanging = true
-        helperRestartAttempts = 0
-
-        service.unregister { [weak self] error in
-            DispatchQueue.main.async {
-                guard let self else { return }
-                if let error {
-                    self.fail(error)
-                    return
+    private func unregisterLegacyServices() {
+        for plistName in PowerModeService.legacyPlistNames {
+            let legacyService = SMAppService.daemon(plistName: plistName)
+            switch legacyService.status {
+            case .enabled, .requiresApproval:
+                legacyService.unregister { [logger] error in
+                    if let error {
+                        logger.error("Could not remove an old Energy Mode helper: \(error.localizedDescription, privacy: .public)")
+                    }
                 }
-
-                // Service Management completes unregistering asynchronously.
-                // Give launchd a short handoff window before registering the
-                // bundled replacement and retrying the pending selection.
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    self.registerService()
-                }
+            case .notFound, .notRegistered:
+                break
+            @unknown default:
+                break
             }
         }
+    }
+
+    private func startHelperResponseTimeout() {
+        helperResponseTimeout?.cancel()
+        let timeout = DispatchWorkItem { [weak self] in
+            guard let self, self.status.isChanging else { return }
+            self.connection?.invalidate()
+            self.connection = nil
+            self.fail(PowerModeControllerError.message(
+                "The Energy Mode helper did not respond."
+            ))
+        }
+        helperResponseTimeout = timeout
+        DispatchQueue.main.asyncAfter(deadline: .now() + 6, execute: timeout)
+    }
+
+    private func cancelHelperResponseTimeout() {
+        helperResponseTimeout?.cancel()
+        helperResponseTimeout = nil
     }
 
     private func activeConnection() throws -> NSXPCConnection {
@@ -417,6 +419,7 @@ final class PowerModeController {
     }
 
     private func fail(_ error: Error) {
+        cancelHelperResponseTimeout()
         pendingMode = nil
         status.isChanging = false
         onError?(error)

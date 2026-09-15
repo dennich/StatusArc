@@ -12,13 +12,14 @@ enum EnergyPowerSource: Int, Sendable {
 }
 
 enum PowerModeService {
-    static let label = "io.github.dennich.StatusArc.PowerHelper"
-    static let plistName = "io.github.dennich.StatusArc.PowerHelper.plist"
+    static let label = "io.github.dennich.StatusArc.PowerHelper2"
+    static let plistName = "io.github.dennich.StatusArc.PowerHelper2.plist"
+    static let legacyPlistNames = ["io.github.dennich.StatusArc.PowerHelper.plist"]
 
     // Increment this whenever the helper implementation or XPC contract changes.
     // A newly updated app asks an older running helper to exit, allowing launchd
     // to start the copy embedded in the new app bundle.
-    static let implementationVersion = 2
+    static let implementationVersion = 3
 }
 
 @objc(StatusArcPowerModeHelperProtocol)

@@ -37,6 +37,7 @@
 		B10000000000000000000008 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B20000000000000000000007 /* Security.framework */; };
 		B10000000000000000000009 /* StatusArcPowerHelper in Embed Helper Tools */ = {isa = PBXBuildFile; fileRef = B20000000000000000000006 /* StatusArcPowerHelper */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		B10000000000000000000010 /* io.github.dennich.StatusArc.PowerHelper.plist in Copy Launch Daemon Plists */ = {isa = PBXBuildFile; fileRef = B20000000000000000000005 /* io.github.dennich.StatusArc.PowerHelper.plist */; };
+		B10000000000000000000011 /* io.github.dennich.StatusArc.PowerHelper2.plist in Copy Launch Daemon Plists */ = {isa = PBXBuildFile; fileRef = B20000000000000000000008 /* io.github.dennich.StatusArc.PowerHelper2.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -68,6 +69,7 @@
 		B20000000000000000000005 /* io.github.dennich.StatusArc.PowerHelper.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = io.github.dennich.StatusArc.PowerHelper.plist; sourceTree = "<group>"; };
 		B20000000000000000000006 /* StatusArcPowerHelper */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = StatusArcPowerHelper; sourceTree = BUILT_PRODUCTS_DIR; };
 		B20000000000000000000007 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
+		B20000000000000000000008 /* io.github.dennich.StatusArc.PowerHelper2.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = io.github.dennich.StatusArc.PowerHelper2.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXContainerItemProxy section */
@@ -99,6 +101,7 @@
 			dstSubfolderSpec = 1;
 			files = (
 				B10000000000000000000010 /* io.github.dennich.StatusArc.PowerHelper.plist in Copy Launch Daemon Plists */,
+				B10000000000000000000011 /* io.github.dennich.StatusArc.PowerHelper2.plist in Copy Launch Daemon Plists */,
 			);
 			name = "Copy Launch Daemon Plists";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -203,6 +206,7 @@
 			children = (
 				B20000000000000000000004 /* main.swift */,
 				B20000000000000000000005 /* io.github.dennich.StatusArc.PowerHelper.plist */,
+				B20000000000000000000008 /* io.github.dennich.StatusArc.PowerHelper2.plist */,
 			);
 			path = PowerModeHelper;
 			sourceTree = "<group>";

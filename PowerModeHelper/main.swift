@@ -63,23 +63,26 @@ private final class PowerModeHelper: NSObject, PowerModeHelperProtocol {
         }
 
         let sourceFlag = powerSource == .battery ? "-b" : "-c"
-        let modeValue = String(mode.rawValue)
+        var arguments = [sourceFlag]
 
-        do {
-            // Current macOS uses the unified Energy Mode setting exposed by
-            // System Settings and Control Center: 0 automatic, 1 low, 2 high.
-            _ = try runPMSet(arguments: [sourceFlag, "powermode", modeValue])
-            return
-        } catch {
-            // Older releases expose separate low/high boolean settings. Keep
-            // this public command-line fallback for the supported OS range.
+        switch mode {
+        case .automatic:
+            arguments += ["lowpowermode", "0"]
+            if supportsHighPower {
+                arguments += ["highpowermode", "0"]
+            }
+
+        case .lowPower:
+            arguments += ["lowpowermode", "1"]
+            if supportsHighPower {
+                arguments += ["highpowermode", "0"]
+            }
+
+        case .highPower:
+            arguments += ["lowpowermode", "0", "highpowermode", "1"]
         }
 
-        var legacyArguments = [sourceFlag, "lowpowermode", mode == .lowPower ? "1" : "0"]
-        if supportsHighPower {
-            legacyArguments += ["highpowermode", mode == .highPower ? "1" : "0"]
-        }
-        _ = try runPMSet(arguments: legacyArguments)
+        _ = try runPMSet(arguments: arguments)
     }
 
     @discardableResult
