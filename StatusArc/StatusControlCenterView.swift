@@ -72,7 +72,7 @@ struct StatusControlCenterView: View {
 
         if #available(macOS 26.0, *) {
             base
-                .glassEffect(.regular.interactive(), in: shape)
+                .glassEffect(.regular, in: shape)
                 .glassEffectID(kind.rawValue, in: glassNamespace)
                 .glassEffectTransition(reduceMotion ? .identity : .materialize)
         } else {
@@ -355,65 +355,60 @@ private struct IslandHeader: View {
 
     var body: some View {
         let inset: CGFloat = expanded ? 18 : 14
-        let header = HStack(spacing: 12) {
-            Group {
-                if let badge {
-                    Text(badge)
-                        .font(.system(size: 15, weight: .bold))
-                } else {
-                    Image(systemName: symbol)
-                        .font(.system(size: 20, weight: .semibold))
-                        .symbolRenderingMode(.hierarchical)
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Group {
+                    if let badge {
+                        Text(badge)
+                            .font(.system(size: 15, weight: .bold))
+                    } else {
+                        Image(systemName: symbol)
+                            .font(.system(size: 20, weight: .semibold))
+                            .symbolRenderingMode(.hierarchical)
+                    }
+                }
+                .foregroundStyle(.tint)
+                .frame(width: 42, height: 42)
+                .background(.white, in: Circle())
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.headline)
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(expanded ? 2 : 1)
+                }
+
+                Spacer(minLength: 8)
+
+                if toggle == nil, let trailing {
+                    Text(trailing)
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
+
+                Image(systemName: expanded ? "chevron.up" : "chevron.down")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+
+                if showsToggle, toggle != nil {
+                    Color.clear.frame(width: 48, height: 1)
                 }
             }
-            .foregroundStyle(.tint)
-            .frame(width: 42, height: 42)
-            .background(.white, in: Circle())
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.headline)
-                Text(subtitle)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(expanded ? 2 : 1)
-            }
-
-            Spacer(minLength: 8)
-
-            if toggle == nil, let trailing {
-                Text(trailing)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.secondary)
-            }
-
-            Image(systemName: expanded ? "chevron.up" : "chevron.down")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.tertiary)
-
-            if showsToggle, toggle != nil {
-                Color.clear.frame(width: 48, height: 1)
+            .padding(inset)
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .contentShape(Rectangle())
+        .overlay(alignment: .trailing) {
+            if showsToggle, let toggle {
+                Toggle("", isOn: toggle)
+                    .labelsHidden()
+                    .disabled(toggleDisabled)
+                    .padding(.trailing, inset)
             }
         }
-        .frame(maxWidth: .infinity)
-        .padding(inset)
-        .allowsHitTesting(false)
-
-        header
-            .overlay {
-                Button(action: action) {
-                    Color.clear
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-            .overlay(alignment: .trailing) {
-                if showsToggle, let toggle {
-                    Toggle("", isOn: toggle)
-                        .labelsHidden()
-                        .disabled(toggleDisabled)
-                        .padding(.trailing, inset)
-                }
-            }
     }
 }
 

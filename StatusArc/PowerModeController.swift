@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import ServiceManagement
 
 enum PowerModeControlState: Equatable {
@@ -33,6 +34,10 @@ final class PowerModeController {
 
     private let service = SMAppService.daemon(plistName: PowerModeService.plistName)
     private let readQueue = DispatchQueue(label: "StatusArc.PowerModeReader", qos: .utility)
+    private let logger = Logger(
+        subsystem: "io.github.dennich.StatusArc",
+        category: "EnergyMode"
+    )
 
     private(set) var status = PowerModeStatus.initial {
         didSet {
@@ -50,6 +55,7 @@ final class PowerModeController {
     private var lastReadDate = Date.distantPast
     private var scheduledRead: DispatchWorkItem?
     private var helperRestartAttempts = 0
+    private var recoveredRegistrationThisLaunch = false
 
     func start() {
         updateServiceState()
@@ -325,9 +331,7 @@ final class PowerModeController {
             let connection = try activeConnection()
             guard let proxy = connection.remoteObjectProxyWithErrorHandler({ [weak self] error in
                 DispatchQueue.main.async {
-                    self?.connection?.invalidate()
-                    self?.connection = nil
-                    self?.fail(error)
+                    self?.handleHelperCommunicationFailure(error)
                 }
             }) as? PowerModeHelperProtocol else {
                 throw PowerModeControllerError.message(
@@ -337,6 +341,48 @@ final class PowerModeController {
             completion(proxy)
         } catch {
             fail(error)
+        }
+    }
+
+    private func handleHelperCommunicationFailure(_ error: Error) {
+        logger.error("Energy Mode helper communication failed: \(error.localizedDescription, privacy: .public)")
+        connection?.invalidate()
+        connection = nil
+
+        // An ad-hoc debug build gets a new designated requirement each time it
+        // is rebuilt. A helper still running from the preceding build must not
+        // trust that new identity. Refreshing its SMAppService registration is
+        // the safe recovery path and preserves the pending user action.
+        guard pendingMode != nil,
+              service.status == .enabled,
+              !recoveredRegistrationThisLaunch else {
+            fail(error)
+            return
+        }
+
+        recoveredRegistrationThisLaunch = true
+        refreshServiceRegistration()
+    }
+
+    private func refreshServiceRegistration() {
+        status.isChanging = true
+        helperRestartAttempts = 0
+
+        service.unregister { [weak self] error in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                if let error {
+                    self.fail(error)
+                    return
+                }
+
+                // Service Management completes unregistering asynchronously.
+                // Give launchd a short handoff window before registering the
+                // bundled replacement and retrying the pending selection.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    self.registerService()
+                }
+            }
         }
     }
 
