@@ -18,7 +18,7 @@ enum PowerModeService {
     // Increment this whenever the helper implementation or XPC contract changes.
     // A newly updated app asks an older running helper to exit, allowing launchd
     // to start the copy embedded in the new app bundle.
-    static let implementationVersion = 1
+    static let implementationVersion = 2
 }
 
 @objc(StatusArcPowerModeHelperProtocol)

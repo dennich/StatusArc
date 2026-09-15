@@ -6,6 +6,7 @@ All notable user-visible changes to StatusArc are documented here.
 
 ### Changed
 - Energy Mode rows now apply Automatic, Low Power, and supported High Power modes directly through a narrowly scoped, code-signature-validated helper. First use registers a previously unseen bundled helper correctly, macOS requests administrator approval once, and the helper uses a version handshake so authorization survives normally signed StatusArc updates.
+- Energy Mode changes use macOS's unified Power Mode setting on current systems, with the earlier low/high-power settings retained as a compatibility fallback.
 - Wi-Fi joins now check only the user keychain for saved passwords. If none is available, StatusArc asks for the password without requesting administrator access to the System keychain.
 - Battery, network, and input-source changes now refresh from macOS events, with a low-frequency recovery refresh, instead of waiting for one-second polling.
 - External power that is paused, complete, or not actively charging now uses a larger vertical plug accessory in a 36-point item, with visual weight comparable to the charging bolt and an accurate battery menu label.
@@ -15,6 +16,7 @@ All notable user-visible changes to StatusArc are documented here.
 - Battery shows visible circular Energy Mode symbols, Connectivity uses a system toggle and inline network list, and Input Source shows complete native names with compact source badges.
 - The battery track now uses a 10-point radius and a 220-degree arc; the network dots and Ethernet line sit lower in the resulting bottom gap.
 - The selected island now remains one persistent glass surface while its frame and corner radius expand or collapse. A critically damped spring drives the transition, neighboring islands use the native materialize transition, and panel sizing follows the same state without stale-value clipping. Energy Mode rows use native hover feedback, and the bolt/plug accessories sit 2 points farther right.
+- Each island header now has one stable full-width click target during glass transitions; the Wi-Fi switch remains an independent native control.
 - One- and two-letter input-source labels use the same 9.5-point size and remain optically centered.
 - Wi-Fi controls now expose scanning, connecting, disconnecting, and power-transition states and prevent duplicate actions while an operation is in progress.
 - Nearby Wi-Fi networks are grouped into known and other networks without an arbitrary result limit; the current network is pinned and checked.

@@ -63,26 +63,23 @@ private final class PowerModeHelper: NSObject, PowerModeHelperProtocol {
         }
 
         let sourceFlag = powerSource == .battery ? "-b" : "-c"
-        var arguments = [sourceFlag]
+        let modeValue = String(mode.rawValue)
 
-        switch mode {
-        case .automatic:
-            arguments += ["lowpowermode", "0"]
-            if supportsHighPower {
-                arguments += ["highpowermode", "0"]
-            }
-
-        case .lowPower:
-            arguments += ["lowpowermode", "1"]
-            if supportsHighPower {
-                arguments += ["highpowermode", "0"]
-            }
-
-        case .highPower:
-            arguments += ["lowpowermode", "0", "highpowermode", "1"]
+        do {
+            // Current macOS uses the unified Energy Mode setting exposed by
+            // System Settings and Control Center: 0 automatic, 1 low, 2 high.
+            _ = try runPMSet(arguments: [sourceFlag, "powermode", modeValue])
+            return
+        } catch {
+            // Older releases expose separate low/high boolean settings. Keep
+            // this public command-line fallback for the supported OS range.
         }
 
-        _ = try runPMSet(arguments: arguments)
+        var legacyArguments = [sourceFlag, "lowpowermode", mode == .lowPower ? "1" : "0"]
+        if supportsHighPower {
+            legacyArguments += ["highpowermode", mode == .highPower ? "1" : "0"]
+        }
+        _ = try runPMSet(arguments: legacyArguments)
     }
 
     @discardableResult
@@ -106,13 +103,17 @@ private final class PowerModeHelper: NSObject, PowerModeHelperProtocol {
         let outputData = output.fileHandleForReading.readDataToEndOfFile()
         let errorData = errors.fileHandleForReading.readDataToEndOfFile()
 
-        guard process.terminationStatus == 0 else {
+        guard process.terminationReason == .exit,
+              process.terminationStatus == 0 else {
             let detail = String(data: errorData, encoding: .utf8)?
                 .trimmingCharacters(in: .whitespacesAndNewlines)
+            let statusDetail = process.terminationReason == .uncaughtSignal
+                ? "The Energy Mode command was interrupted by signal \(process.terminationStatus)."
+                : "The Energy Mode command exited with status \(process.terminationStatus)."
             throw PowerModeHelperError.message(
                 detail?.isEmpty == false
                     ? detail!
-                    : "macOS did not apply the selected Energy Mode."
+                    : statusDetail
             )
         }
 
