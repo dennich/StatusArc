@@ -63,26 +63,21 @@ private final class PowerModeHelper: NSObject, PowerModeHelperProtocol {
         }
 
         let sourceFlag = powerSource == .battery ? "-b" : "-c"
-        var arguments = [sourceFlag]
+        let modeValue = String(mode.rawValue)
 
-        switch mode {
-        case .automatic:
-            arguments += ["lowpowermode", "0"]
-            if supportsHighPower {
-                arguments += ["highpowermode", "0"]
-            }
-
-        case .lowPower:
-            arguments += ["lowpowermode", "1"]
-            if supportsHighPower {
-                arguments += ["highpowermode", "0"]
-            }
-
-        case .highPower:
-            arguments += ["lowpowermode", "0", "highpowermode", "1"]
+        // Current macOS versions expose Energy Mode as one tri-state setting:
+        // 0 = Automatic, 1 = Low Power, 2 = High Power. Keep the older key
+        // pair as a fallback for systems predating that command-line form.
+        do {
+            _ = try runPMSet(arguments: [sourceFlag, "powermode", modeValue])
+        } catch let error as PowerModeHelperError where error.isCommandFailure {
+            _ = try runPMSet(
+                arguments: [sourceFlag] + legacySettings(
+                    for: mode,
+                    supportsHighPower: supportsHighPower
+                )
+            )
         }
-
-        _ = try runPMSet(arguments: arguments)
 
         let profiles = try runPMSet(arguments: ["-g", "custom"])
         guard currentMode(in: profiles, for: powerSource) == mode else {
@@ -98,25 +93,51 @@ private final class PowerModeHelper: NSObject, PowerModeHelperProtocol {
     ) -> EnergyMode? {
         let requestedHeading = powerSource == .battery ? "Battery Power:" : "AC Power:"
         var currentHeading: String?
-        var values: [String: Int] = [:]
+        var profiles: [String: [String: Int]] = [:]
 
         for rawLine in output.split(separator: "\n", omittingEmptySubsequences: false) {
             let line = rawLine.trimmingCharacters(in: .whitespaces)
             if line.hasSuffix(":") {
                 currentHeading = line
+                profiles[line, default: [:]] = profiles[line, default: [:]]
                 continue
             }
-            guard currentHeading == requestedHeading else { continue }
 
             let parts = line.split(whereSeparator: \Character.isWhitespace)
-            guard parts.count == 2, let value = Int(parts[1]) else { continue }
-            values[String(parts[0])] = value
+            guard parts.count == 2,
+                  let value = Int(parts[1]),
+                  let currentHeading else { continue }
+            profiles[currentHeading, default: [:]][String(parts[0])] = value
         }
 
+        // Newer systems may expose only one active power profile in `-g custom`.
+        let values = profiles[requestedHeading] ?? profiles.values.first ?? [:]
+
+        if let value = values["powermode"] {
+            return EnergyMode(rawValue: value)
+        }
         if values["highpowermode"] == 1 { return .highPower }
         if values["lowpowermode"] == 1 { return .lowPower }
         if values["lowpowermode"] != nil { return .automatic }
         return nil
+    }
+
+    private static func legacySettings(
+        for mode: EnergyMode,
+        supportsHighPower: Bool
+    ) -> [String] {
+        switch mode {
+        case .automatic:
+            return supportsHighPower
+                ? ["lowpowermode", "0", "highpowermode", "0"]
+                : ["lowpowermode", "0"]
+        case .lowPower:
+            return supportsHighPower
+                ? ["lowpowermode", "1", "highpowermode", "0"]
+                : ["lowpowermode", "1"]
+        case .highPower:
+            return ["lowpowermode", "0", "highpowermode", "1"]
+        }
     }
 
     @discardableResult
@@ -153,15 +174,14 @@ private final class PowerModeHelper: NSObject, PowerModeHelperProtocol {
 
         guard process.terminationReason == .exit,
               process.terminationStatus == 0 else {
-            let detail = String(data: errorData, encoding: .utf8)?
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            let statusDetail = process.terminationReason == .uncaughtSignal
-                ? "The Energy Mode command was interrupted by signal \(process.terminationStatus)."
-                : "The Energy Mode command exited with status \(process.terminationStatus)."
-            throw PowerModeHelperError.message(
-                detail?.isEmpty == false
-                    ? detail!
-                    : statusDetail
+            let standardError = String(data: errorData, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let standardOutput = String(data: outputData, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            throw PowerModeHelperError.commandFailed(
+                status: process.terminationStatus,
+                wasInterrupted: process.terminationReason == .uncaughtSignal,
+                detail: standardError.isEmpty ? standardOutput : standardError
             )
         }
 
@@ -185,10 +205,21 @@ private final class PowerModeListenerDelegate: NSObject, NSXPCListenerDelegate {
 
 private enum PowerModeHelperError: LocalizedError {
     case message(String)
+    case commandFailed(status: Int32, wasInterrupted: Bool, detail: String)
+
+    var isCommandFailure: Bool {
+        if case .commandFailed = self { return true }
+        return false
+    }
 
     var errorDescription: String? {
         switch self {
-        case .message(let message): message
+        case .message(let message): return message
+        case .commandFailed(let status, let wasInterrupted, let detail):
+            if !detail.isEmpty { return detail }
+            return wasInterrupted
+                ? "The Energy Mode command was interrupted by signal \(status)."
+                : "The Energy Mode command exited with status \(status)."
         }
     }
 }

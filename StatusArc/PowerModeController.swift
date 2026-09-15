@@ -438,11 +438,15 @@ final class PowerModeController {
         let values = profileValues(in: profiles, for: powerSource)
         let supportsLow = capabilityNames.contains("lowpowermode")
             || values["lowpowermode"] != nil
+            || values["powermode"] != nil
         let supportsHigh = capabilityNames.contains("highpowermode")
             || values["highpowermode"] != nil
+            || values["powermode"] == EnergyMode.highPower.rawValue
 
         let mode: EnergyMode?
-        if values["highpowermode"] == 1 {
+        if let value = values["powermode"] {
+            mode = EnergyMode(rawValue: value)
+        } else if values["highpowermode"] == 1 {
             mode = .highPower
         } else if values["lowpowermode"] == 1 {
             mode = .lowPower
