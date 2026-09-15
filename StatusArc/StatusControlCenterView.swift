@@ -322,7 +322,6 @@ private struct FirstMouseButton: NSViewRepresentable {
 
 private final class FirstMouseClickView: NSView {
     var action: () -> Void = {}
-    private var isTrackingPrimaryClick = false
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
         true
@@ -331,15 +330,6 @@ private final class FirstMouseClickView: NSView {
     override func mouseDown(with event: NSEvent) {
         guard event.buttonNumber == 0 else {
             super.mouseDown(with: event)
-            return
-        }
-        isTrackingPrimaryClick = true
-    }
-
-    override func mouseUp(with event: NSEvent) {
-        defer { isTrackingPrimaryClick = false }
-        guard isTrackingPrimaryClick,
-              bounds.contains(convert(event.locationInWindow, from: nil)) else {
             return
         }
         action()
