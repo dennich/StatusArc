@@ -133,11 +133,14 @@ panel label rather than claiming active charging.
 - Confirm Connectivity contains a working system toggle, nearby and known
   networks, and Network and Wi-Fi Settings destinations.
 - Confirm Battery shows its percentage, power state, power source, and the
-  current public Energy Mode state. Confirm each Energy Mode row has pointer
-  hover and keyboard focus feedback, and opens Battery Settings for the
-  system-owned selection.
+  current Energy Mode state. On first change, approve StatusArc under Login
+  Items when macOS asks. Confirm later changes do not request a password, the
+  island remains open, and the selected row changes only after macOS confirms
+  the new mode.
+- Confirm a helper failure stops the progress indicator and reports an error
+  instead of loading indefinitely.
 - Confirm all three Energy Mode rows show circular battery symbols and the
-  current public mode uses the accented state.
+  current mode uses the accented state. Unsupported modes remain disabled.
 - On macOS 26 or later, confirm the islands use Liquid Glass and matched
   expansion transitions. On macOS 13–25, confirm they use semantic material
   with readable text and smooth state changes.

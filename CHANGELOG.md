@@ -5,7 +5,7 @@ All notable user-visible changes to StatusArc are documented here.
 ## [Unreleased]
 
 ### Changed
-- Energy Mode returns to the helper-free GitHub behavior: StatusArc displays the public macOS state and hands changes to Battery Settings.
+- Energy Mode changes use a narrowly scoped Service Management helper with one-time macOS approval. The helper verifies each requested setting, and the interface times out cleanly instead of loading indefinitely.
 - Wi-Fi joins now check only the user keychain for saved passwords. If none is available, StatusArc asks for the password without requesting administrator access to the System keychain.
 - Battery, network, and input-source changes now refresh from macOS events, with a low-frequency recovery refresh, instead of waiting for one-second polling.
 - External power that is paused, complete, or not actively charging now uses a larger vertical plug accessory in a 36-point item, with visual weight comparable to the charging bolt and an accurate battery menu label.

@@ -145,26 +145,47 @@ struct StatusControlCenterView: View {
                         .foregroundStyle(.secondary)
 
                     VStack(alignment: .leading, spacing: 9) {
-                        Text("Energy Mode")
-                            .font(.headline)
+                        HStack {
+                            Text("Energy Mode")
+                                .font(.headline)
+                            Spacer()
+                            if model.energyModeChanging {
+                                ProgressView()
+                                    .controlSize(.small)
+                            }
+                        }
                         EnergyModeRow(
                             title: "Automatic",
                             symbol: "battery.100",
-                            selected: model.lowPowerModeEnabled == false,
-                            action: { model.openBatterySettings?() }
+                            selected: selectedEnergyMode == .automatic,
+                            action: energyModeAction(.automatic)
                         )
                         EnergyModeRow(
                             title: "Low Power",
                             symbol: "battery.25",
-                            selected: model.lowPowerModeEnabled == true,
-                            action: { model.openBatterySettings?() }
+                            selected: selectedEnergyMode == .lowPower,
+                            action: energyModeAction(.lowPower)
                         )
                         EnergyModeRow(
                             title: "High Power",
                             symbol: "battery.100.bolt",
-                            selected: false,
-                            action: { model.openBatterySettings?() }
+                            selected: selectedEnergyMode == .highPower,
+                            action: energyModeAction(.highPower)
                         )
+
+                        if model.powerModeControlState == .requiresApproval {
+                            ActionRow(
+                                title: "Allow Energy Mode Control…",
+                                symbol: "lock.open"
+                            ) {
+                                model.openEnergyModeApproval?()
+                            }
+                        } else if case .unavailable(let message) = model.powerModeControlState {
+                            Text(message)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 8)
+                        }
                     }
 
                     Divider()
@@ -296,6 +317,23 @@ struct StatusControlCenterView: View {
 
     private func toggleIsland(_ island: StatusIsland) {
         model.toggle(island)
+    }
+
+    private var selectedEnergyMode: EnergyMode? {
+        if let energyMode = model.energyMode {
+            return energyMode
+        }
+        return model.lowPowerModeEnabled.map { $0 ? .lowPower : .automatic }
+    }
+
+    private func energyModeAction(_ mode: EnergyMode) -> (() -> Void)? {
+        guard model.energyModeCapabilitiesKnown,
+              model.supportsLowPowerMode,
+              !model.energyModeChanging,
+              mode != .highPower || model.supportsHighPowerMode else {
+            return nil
+        }
+        return { model.selectEnergyMode?(mode) }
     }
 }
 
@@ -574,6 +612,10 @@ private struct EnergyModeRow: View {
             }
         }
         .onHover { hovered in
+            guard action != nil else {
+                isHovered = false
+                return
+            }
             withAnimation(reduceMotion ? nil : StatusMotion.hover) {
                 isHovered = hovered
             }
