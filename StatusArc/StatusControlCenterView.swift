@@ -295,9 +295,7 @@ struct StatusControlCenterView: View {
     }
 
     private func toggleIsland(_ island: StatusIsland) {
-        withAnimation(reduceMotion ? nil : StatusMotion.expansion) {
-            model.toggle(island)
-        }
+        model.toggle(island)
     }
 }
 

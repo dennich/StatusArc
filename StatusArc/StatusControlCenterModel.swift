@@ -27,6 +27,8 @@ struct StatusInputSourceRow: Identifiable, Equatable {
 final class StatusControlCenterModel: ObservableObject {
     @Published var expandedIsland: StatusIsland?
 
+    var requestIslandToggle: ((StatusIsland) -> Void)?
+
     @Published private(set) var batteryPercentage: Int?
     @Published private(set) var batteryState = "Not available"
     @Published private(set) var powerSource = "—"
@@ -73,7 +75,11 @@ final class StatusControlCenterModel: ObservableObject {
     }
 
     func toggle(_ island: StatusIsland) {
-        expandedIsland = expandedIsland == island ? nil : island
+        if let requestIslandToggle {
+            requestIslandToggle(island)
+        } else {
+            expandedIsland = expandedIsland == island ? nil : island
+        }
     }
 
     func update(

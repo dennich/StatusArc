@@ -1,5 +1,4 @@
 import AppKit
-import Combine
 import SwiftUI
 
 private final class StatusPanel: NSPanel {
@@ -11,7 +10,7 @@ final class StatusPanelController: NSObject {
     private let statusItem: NSStatusItem
     private let model: StatusControlCenterModel
     private let panel: StatusPanel
-    private var cancellable: AnyCancellable?
+    private var pendingCompactResize: DispatchWorkItem?
     private var localMonitor: Any?
     private var globalMonitor: Any?
 
@@ -36,14 +35,9 @@ final class StatusPanelController: NSObject {
         panel.backgroundColor = .clear
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
         panel.contentViewController = NSHostingController(rootView: StatusControlCenterView(model: model))
-
-        cancellable = model.$expandedIsland
-            .removeDuplicates()
-            .sink { [weak self] expandedIsland in
-                DispatchQueue.main.async {
-                    self?.resizeForContent(expandedIsland: expandedIsland)
-                }
-            }
+        model.requestIslandToggle = { [weak self] island in
+            self?.toggleIsland(island)
+        }
     }
 
     func toggle() {
@@ -52,7 +46,7 @@ final class StatusPanelController: NSObject {
 
     func show(animated: Bool) {
         onWillShow?()
-        resizeForContent(animated: false)
+        setPanelHeight(height(for: model.expandedIsland))
         positionPanel()
         installEventMonitors()
         panel.alphaValue = animated && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? 0 : 1
@@ -69,6 +63,8 @@ final class StatusPanelController: NSObject {
 
     func hide(animated: Bool) {
         removeEventMonitors()
+        pendingCompactResize?.cancel()
+        pendingCompactResize = nil
         model.expandedIsland = nil
 
         guard animated && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
@@ -93,45 +89,71 @@ final class StatusPanelController: NSObject {
         }
     }
 
-    private func resizeForContent(animated: Bool = true) {
-        resizeForContent(expandedIsland: model.expandedIsland, animated: animated)
-    }
+    private func toggleIsland(_ island: StatusIsland) {
+        pendingCompactResize?.cancel()
+        pendingCompactResize = nil
 
-    private func resizeForContent(
-        expandedIsland: StatusIsland?,
-        animated: Bool = true
-    ) {
-        guard panel.isVisible || !animated else { return }
-
-        let targetHeight: CGFloat
-        switch expandedIsland {
-        case .battery: targetHeight = 548
-        case .connectivity: targetHeight = 620
-        case .inputSource: targetHeight = 560
-        case nil: targetHeight = 286
+        if model.expandedIsland == island {
+            setExpandedIsland(nil)
+            scheduleCompactResize()
+            return
         }
-        setPanelHeight(targetHeight, animated: animated)
+
+        // Give SwiftUI the final canvas before the glass changes identity. This
+        // mirrors Apple's examples: only the glass participates in the visible
+        // transition, rather than competing with an AppKit window animation.
+        setPanelHeight(height(for: island))
+        panel.contentView?.layoutSubtreeIfNeeded()
+
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.panel.isVisible else { return }
+            self.setExpandedIsland(island)
+        }
     }
 
-    private func setPanelHeight(_ height: CGFloat, animated: Bool) {
+    private func setExpandedIsland(_ island: StatusIsland?) {
+        let animation = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+            ? nil
+            : StatusMotion.expansion
+        withAnimation(animation) {
+            model.expandedIsland = island
+        }
+    }
+
+    private func scheduleCompactResize() {
+        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
+            setPanelHeight(height(for: nil))
+            return
+        }
+
+        let work = DispatchWorkItem { [weak self] in
+            guard let self, self.model.expandedIsland == nil else { return }
+            self.setPanelHeight(self.height(for: nil))
+            self.pendingCompactResize = nil
+        }
+        pendingCompactResize = work
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + StatusMotion.expansionDuration,
+            execute: work
+        )
+    }
+
+    private func height(for expandedIsland: StatusIsland?) -> CGFloat {
+        switch expandedIsland {
+        case .battery: return 548
+        case .connectivity: return 620
+        case .inputSource: return 560
+        case nil: return 286
+        }
+    }
+
+    private func setPanelHeight(_ height: CGFloat) {
         guard abs(panel.frame.height - height) > 0.5 else { return }
         var frame = panel.frame
         let top = frame.maxY
         frame.size = NSSize(width: 360, height: height)
         frame.origin.y = top - frame.height
-
-        guard animated,
-              !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
-            panel.setFrame(frame, display: true)
-            return
-        }
-
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = StatusMotion.expansionDuration
-            context.timingFunction = StatusMotion.expansionTimingFunction
-            context.allowsImplicitAnimation = true
-            panel.animator().setFrame(frame, display: true)
-        }
+        panel.setFrame(frame, display: true)
     }
 
     private func positionPanel() {
@@ -174,6 +196,7 @@ final class StatusPanelController: NSObject {
     }
 
     deinit {
+        pendingCompactResize?.cancel()
         if let localMonitor { NSEvent.removeMonitor(localMonitor) }
         if let globalMonitor { NSEvent.removeMonitor(globalMonitor) }
     }
