@@ -305,44 +305,49 @@ private struct FirstMouseButton: NSViewRepresentable {
     let accessibilityLabel: String
     let action: () -> Void
 
-    func makeCoordinator() -> Coordinator {
-        Coordinator(action: action)
+    func makeNSView(context: Context) -> FirstMouseClickView {
+        let view = FirstMouseClickView()
+        view.action = action
+        view.setAccessibilityElement(true)
+        view.setAccessibilityRole(.button)
+        view.setAccessibilityLabel(accessibilityLabel)
+        return view
     }
 
-    func makeNSView(context: Context) -> NSButton {
-        let button = FirstMouseNSButton()
-        button.title = ""
-        button.isBordered = false
-        button.isTransparent = true
-        button.focusRingType = .none
-        button.target = context.coordinator
-        button.action = #selector(Coordinator.performAction)
-        button.setAccessibilityRole(.button)
-        button.setAccessibilityLabel(accessibilityLabel)
-        return button
-    }
-
-    func updateNSView(_ button: NSButton, context: Context) {
-        context.coordinator.action = action
-        button.setAccessibilityLabel(accessibilityLabel)
-    }
-
-    final class Coordinator: NSObject {
-        var action: () -> Void
-
-        init(action: @escaping () -> Void) {
-            self.action = action
-        }
-
-        @objc func performAction() {
-            action()
-        }
+    func updateNSView(_ view: FirstMouseClickView, context: Context) {
+        view.action = action
+        view.setAccessibilityLabel(accessibilityLabel)
     }
 }
 
-private final class FirstMouseNSButton: NSButton {
+private final class FirstMouseClickView: NSView {
+    var action: () -> Void = {}
+    private var isTrackingPrimaryClick = false
+
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
         true
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        guard event.buttonNumber == 0 else {
+            super.mouseDown(with: event)
+            return
+        }
+        isTrackingPrimaryClick = true
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        defer { isTrackingPrimaryClick = false }
+        guard isTrackingPrimaryClick,
+              bounds.contains(convert(event.locationInWindow, from: nil)) else {
+            return
+        }
+        action()
+    }
+
+    override func accessibilityPerformPress() -> Bool {
+        action()
+        return true
     }
 }
 
