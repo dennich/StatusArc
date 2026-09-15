@@ -191,11 +191,28 @@ private final class PowerModeHelper: NSObject, PowerModeHelperProtocol {
 
 private final class PowerModeListenerDelegate: NSObject, NSXPCListenerDelegate {
     private let helper = PowerModeHelper()
+    private let dynamicAppExecutableURL: URL?
+
+    init(dynamicAppExecutableURL: URL? = nil) {
+        self.dynamicAppExecutableURL = dynamicAppExecutableURL
+    }
 
     func listener(
         _ listener: NSXPCListener,
         shouldAcceptNewConnection connection: NSXPCConnection
     ) -> Bool {
+        if let dynamicAppExecutableURL {
+            // Debug builds are ad-hoc signed, so their designated requirement
+            // can change after every rebuild. Resolve it from the current app
+            // for each connection. Release builds retain a requirement fixed
+            // at helper launch so a mutable app path cannot change root trust.
+            guard let appRequirement = CodeSigningRequirement.forCode(
+                at: dynamicAppExecutableURL
+            ) else {
+                return false
+            }
+            connection.setCodeSigningRequirement(appRequirement)
+        }
         connection.exportedInterface = NSXPCInterface(with: PowerModeHelperProtocol.self)
         connection.exportedObject = helper
         connection.resume()
@@ -240,14 +257,23 @@ private func mainApplicationExecutableURL() -> URL? {
 }
 
 private let listener = NSXPCListener(machServiceName: PowerModeService.label)
-private let delegate = PowerModeListenerDelegate()
 
+#if DEBUG
+guard let debugAppExecutableURL = mainApplicationExecutableURL() else {
+    exit(EXIT_FAILURE)
+}
+private let delegate = PowerModeListenerDelegate(
+    dynamicAppExecutableURL: debugAppExecutableURL
+)
+#else
 guard let appExecutableURL = mainApplicationExecutableURL(),
       let appRequirement = CodeSigningRequirement.forCode(at: appExecutableURL) else {
     exit(EXIT_FAILURE)
 }
-
 listener.setConnectionCodeSigningRequirement(appRequirement)
+private let delegate = PowerModeListenerDelegate()
+#endif
+
 listener.delegate = delegate
 listener.resume()
 RunLoop.current.run()

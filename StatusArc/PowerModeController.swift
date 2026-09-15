@@ -34,6 +34,7 @@ final class PowerModeController {
 
     private let service = SMAppService.daemon(plistName: PowerModeService.plistName)
     private let readQueue = DispatchQueue(label: "StatusArc.PowerModeReader", qos: .utility)
+    private let registeredVersionKey = "PowerModeService.registeredImplementationVersion"
 
     private(set) var status = PowerModeStatus.initial {
         didSet {
@@ -58,6 +59,7 @@ final class PowerModeController {
     func start() {
         updateServiceState()
         refresh()
+        refreshRegistrationIfNeeded()
     }
 
     func stop() {
@@ -171,10 +173,11 @@ final class PowerModeController {
 
         do {
             try service.register()
+            recordRegisteredVersion()
             updateServiceState()
 
             if service.status == .enabled {
-                applyPendingMode()
+                didEnableCurrentService()
             } else {
                 status.isChanging = false
                 requestApproval()
@@ -183,15 +186,55 @@ final class PowerModeController {
             updateServiceState()
             let errorCode = (error as NSError).code
             if service.status == .enabled {
-                applyPendingMode()
+                didEnableCurrentService()
             } else if service.status == .requiresApproval
                         || errorCode == Int(kSMErrorLaunchDeniedByUser) {
+                recordRegisteredVersion()
                 status.isChanging = false
                 requestApproval()
             } else {
                 fail(error)
             }
         }
+    }
+
+    private func refreshRegistrationIfNeeded() {
+        guard service.status == .enabled || service.status == .requiresApproval,
+              UserDefaults.standard.integer(forKey: registeredVersionKey)
+                != PowerModeService.implementationVersion else {
+            return
+        }
+
+        status.isChanging = true
+        service.unregister { [weak self] error in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                if let error,
+                   (error as NSError).code != Int(kSMErrorJobNotFound) {
+                    self.fail(error)
+                    return
+                }
+
+                self.connection?.invalidate()
+                self.connection = nil
+                self.registerService()
+            }
+        }
+    }
+
+    private func didEnableCurrentService() {
+        recordRegisteredVersion()
+        status.isChanging = false
+        if pendingMode != nil {
+            applyPendingMode()
+        }
+    }
+
+    private func recordRegisteredVersion() {
+        UserDefaults.standard.set(
+            PowerModeService.implementationVersion,
+            forKey: registeredVersionKey
+        )
     }
 
     private func requestApproval() {
@@ -229,6 +272,7 @@ final class PowerModeController {
         approvalTimer?.invalidate()
         approvalTimer = nil
         approvalDeadline = nil
+        recordRegisteredVersion()
         prepareRunningHelperIfNeeded {
             self.applyPendingMode()
         }
