@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct StatusControlCenterView: View {
@@ -45,16 +46,17 @@ struct StatusControlCenterView: View {
     @ViewBuilder
     private func compactIsland(_ kind: StatusIsland) -> some View {
         islandSurface(kind, expanded: false) {
-            Button {
+            compactHeader(for: kind)
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .allowsHitTesting(false)
+        }
+        .overlay {
+            FirstMouseButton(
+                accessibilityLabel: "Open \(kind.accessibilityName) controls"
+            ) {
                 toggleIsland(kind)
-            } label: {
-                compactHeader(for: kind)
-                    .padding(14)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
             }
-            .buttonStyle(.plain)
-            .accessibilityHint("Expands \(kind.accessibilityName) controls")
         }
     }
 
@@ -143,62 +145,26 @@ struct StatusControlCenterView: View {
                         .foregroundStyle(.secondary)
 
                     VStack(alignment: .leading, spacing: 9) {
-                        HStack {
-                            Text("Energy Mode")
-                                .font(.headline)
-                            Spacer()
-                            if model.energyModeChanging {
-                                ProgressView()
-                                    .controlSize(.small)
-                            }
-                        }
-
-                        if !model.energyModeCapabilitiesKnown {
-                            ProgressView()
-                                .controlSize(.small)
-                                .frame(maxWidth: .infinity, minHeight: 44)
-                        } else if model.supportsLowPowerMode {
-                            EnergyModeRow(
-                                title: "Automatic",
-                                symbol: "battery.100",
-                                selected: model.energyMode == .automatic,
-                                action: model.energyModeChanging ? nil : {
-                                    model.selectEnergyMode?(.automatic)
-                                }
-                            )
-                            EnergyModeRow(
-                                title: "Low Power",
-                                symbol: "battery.25",
-                                selected: model.energyMode == .lowPower,
-                                action: model.energyModeChanging ? nil : {
-                                    model.selectEnergyMode?(.lowPower)
-                                }
-                            )
-                            if model.supportsHighPowerMode {
-                                EnergyModeRow(
-                                    title: "High Power",
-                                    symbol: "battery.100.bolt",
-                                    selected: model.energyMode == .highPower,
-                                    action: model.energyModeChanging ? nil : {
-                                        model.selectEnergyMode?(.highPower)
-                                    }
-                                )
-                            }
-                        } else {
-                            Text("Energy Mode is not available on this Mac.")
-                                .font(.callout)
-                                .foregroundStyle(.secondary)
-                                .padding(.vertical, 6)
-                        }
-
-                        if model.powerModeControlState == .requiresApproval {
-                            ActionRow(
-                                title: "Allow Energy Mode Control…",
-                                symbol: "lock.open"
-                            ) {
-                                model.openEnergyModeApproval?()
-                            }
-                        }
+                        Text("Energy Mode")
+                            .font(.headline)
+                        EnergyModeRow(
+                            title: "Automatic",
+                            symbol: "battery.100",
+                            selected: model.lowPowerModeEnabled == false,
+                            action: { model.openBatterySettings?() }
+                        )
+                        EnergyModeRow(
+                            title: "Low Power",
+                            symbol: "battery.25",
+                            selected: model.lowPowerModeEnabled == true,
+                            action: { model.openBatterySettings?() }
+                        )
+                        EnergyModeRow(
+                            title: "High Power",
+                            symbol: "battery.100.bolt",
+                            selected: false,
+                            action: { model.openBatterySettings?() }
+                        )
                     }
 
                     Divider()
@@ -332,6 +298,51 @@ struct StatusControlCenterView: View {
         withAnimation(reduceMotion ? nil : StatusMotion.expansion) {
             model.toggle(island)
         }
+    }
+}
+
+private struct FirstMouseButton: NSViewRepresentable {
+    let accessibilityLabel: String
+    let action: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(action: action)
+    }
+
+    func makeNSView(context: Context) -> NSButton {
+        let button = FirstMouseNSButton()
+        button.title = ""
+        button.isBordered = false
+        button.isTransparent = true
+        button.focusRingType = .none
+        button.target = context.coordinator
+        button.action = #selector(Coordinator.performAction)
+        button.setAccessibilityRole(.button)
+        button.setAccessibilityLabel(accessibilityLabel)
+        return button
+    }
+
+    func updateNSView(_ button: NSButton, context: Context) {
+        context.coordinator.action = action
+        button.setAccessibilityLabel(accessibilityLabel)
+    }
+
+    final class Coordinator: NSObject {
+        var action: () -> Void
+
+        init(action: @escaping () -> Void) {
+            self.action = action
+        }
+
+        @objc func performAction() {
+            action()
+        }
+    }
+}
+
+private final class FirstMouseNSButton: NSButton {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
+        true
     }
 }
 

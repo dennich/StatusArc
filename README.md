@@ -75,10 +75,9 @@ supported versions.
 - Charging / fully charged state
 - Current power source
 - Time remaining when macOS provides it
-- Current Automatic, Low Power, or High Power energy-mode state when supported
+- Current Automatic or Low Power energy-mode state
 - Circular native battery symbols for Automatic, Low Power, and High Power
-- Direct Energy Mode selection after one-time administrator approval
-- Approval that remains valid across normally signed StatusArc updates
+- Hoverable Energy Mode actions that open Battery Settings for system-owned changes
 - Shortcut to energy details in Activity Monitor
 - Shortcut to Battery Settings
 
@@ -172,11 +171,9 @@ See [PRIVACY.md](PRIVACY.md) for more detail.
   join UI.
 - Apple does not expose public third-party controls for Charge to Full Now,
   changing Energy Mode, enumerating significant-energy apps, or toggling Show
-  Input Source Name. For Energy Mode only, StatusArc offers a narrowly scoped
-  helper that macOS authorizes once and runs as a launch daemon. It accepts only
-  Automatic, Low Power, and High Power requests, applies them to the active
-  power source through `/usr/bin/pmset`, and remains authorized across normally
-  signed app updates. High Power is shown only on Macs that report support.
+  Input Source Name. StatusArc reports the public state. Energy Mode rows are
+  real keyboard-accessible buttons with native hover feedback, and open the
+  matching Battery Settings destination where macOS owns the actual selection.
 - Enterprise/802.1X Wi-Fi is handed off to macOS Wi-Fi Settings because
   identities, certificates, and managed credentials are better handled by the
   system.

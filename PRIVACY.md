@@ -26,19 +26,6 @@ services independently of StatusArc.
 
 Battery state is read locally from IOKit power-source APIs.
 
-### Energy Mode control
-
-Direct Energy Mode changes are optional. The first change asks macOS to approve
-a bundled StatusArc launch daemon with administrator privileges. The helper
-accepts only three fixed requests—Automatic, Low Power, and High Power—and
-passes the corresponding fixed arguments to the local `/usr/bin/pmset` tool.
-It cannot execute arbitrary commands and has no network behavior.
-
-The app and helper verify each other's code-signing requirements before using
-their XPC connection. macOS stores the helper approval so normally signed app
-updates do not ask for a password again. The user can revoke the helper in
-System Settings.
-
 ## Network information
 
 StatusArc reads the primary active interface from SystemConfiguration and reads
