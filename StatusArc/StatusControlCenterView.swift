@@ -332,7 +332,10 @@ private final class FirstMouseClickView: NSView {
             super.mouseDown(with: event)
             return
         }
-        action()
+        let action = action
+        DispatchQueue.main.async {
+            action()
+        }
     }
 
     override func accessibilityPerformPress() -> Bool {
