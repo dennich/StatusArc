@@ -40,8 +40,8 @@ final class StatusPanelController: NSObject {
 
         cancellable = model.$expandedIsland
             .removeDuplicates()
-            .sink { [weak self] _ in
-                self?.resizeForContent()
+            .sink { [weak self] expandedIsland in
+                self?.resizeForContent(expandedIsland: expandedIsland)
             }
     }
 
@@ -93,13 +93,26 @@ final class StatusPanelController: NSObject {
     }
 
     private func resizeForContent(animated: Bool = true) {
+        resizeForContent(expandedIsland: model.expandedIsland, animated: animated)
+    }
+
+    private func resizeForContent(
+        expandedIsland: StatusIsland?,
+        animated: Bool = true
+    ) {
         pendingResize?.cancel()
         guard panel.isVisible || !animated else { return }
 
-        let targetHeight = model.panelHeight
+        let targetHeight: CGFloat
+        switch expandedIsland {
+        case .battery: targetHeight = 548
+        case .connectivity: targetHeight = 620
+        case .inputSource: targetHeight = 560
+        case nil: targetHeight = 286
+        }
         if animated, targetHeight < panel.frame.height {
             let work = DispatchWorkItem { [weak self] in
-                guard let self, self.model.panelHeight == targetHeight else { return }
+                guard let self, self.model.expandedIsland == expandedIsland else { return }
                 self.setPanelHeight(targetHeight)
             }
             pendingResize = work

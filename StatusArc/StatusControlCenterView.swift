@@ -8,7 +8,7 @@ struct StatusControlCenterView: View {
     var body: some View {
         Group {
             if #available(macOS 26.0, *) {
-                GlassEffectContainer(spacing: 8) {
+                GlassEffectContainer(spacing: 12) {
                     islandStack
                 }
             } else {
@@ -24,7 +24,6 @@ struct StatusControlCenterView: View {
         VStack(spacing: 10) {
             ForEach(visibleIslands, id: \.self) { kind in
                 island(kind)
-                    .transition(.opacity)
             }
 
             if model.expandedIsland == nil {
@@ -75,13 +74,17 @@ struct StatusControlCenterView: View {
             base
                 .glassEffect(.regular.interactive(), in: shape)
                 .glassEffectID(kind.rawValue, in: glassNamespace)
-                .glassEffectTransition(.matchedGeometry)
+                .glassEffectTransition(reduceMotion ? .identity : .materialize)
         } else {
             base
                 .background(.regularMaterial, in: shape)
                 .overlay(shape.stroke(.white.opacity(0.14), lineWidth: 0.7))
                 .shadow(color: .black.opacity(0.2), radius: 12, y: 5)
-                .matchedGeometryEffect(id: kind.rawValue, in: glassNamespace)
+                .transition(
+                    reduceMotion
+                        ? .identity
+                        : .scale(scale: 0.96).combined(with: .opacity)
+                )
         }
     }
 

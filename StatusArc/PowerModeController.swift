@@ -141,9 +141,10 @@ final class PowerModeController {
             requestApproval()
 
         case .notFound:
-            fail(PowerModeControllerError.message(
-                "The Energy Mode helper is missing from this copy of StatusArc."
-            ))
+            // `.notFound` is also the initial state before macOS has seen a
+            // bundled service. Registration is what lets Service Management
+            // distinguish that state from an invalid app bundle.
+            registerService()
 
         @unknown default:
             fail(PowerModeControllerError.message(
@@ -221,7 +222,7 @@ final class PowerModeController {
         case .requiresApproval:
             status.controlState = .requiresApproval
         case .notFound:
-            status.controlState = .unavailable(
+            status.controlState = bundledServiceIsPresent ? .notConfigured : .unavailable(
                 "The Energy Mode helper is missing from this copy of StatusArc."
             )
         @unknown default:
@@ -229,6 +230,16 @@ final class PowerModeController {
                 "macOS returned an unknown Energy Mode helper state."
             )
         }
+    }
+
+    private var bundledServiceIsPresent: Bool {
+        let helperURL = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/MacOS/StatusArcPowerHelper")
+        let plistURL = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/Library/LaunchDaemons")
+            .appendingPathComponent(PowerModeService.plistName)
+        return FileManager.default.isExecutableFile(atPath: helperURL.path)
+            && FileManager.default.fileExists(atPath: plistURL.path)
     }
 
     private func prepareRunningHelperIfNeeded(completion: (() -> Void)? = nil) {
