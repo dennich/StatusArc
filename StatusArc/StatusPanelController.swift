@@ -14,7 +14,6 @@ final class StatusPanelController: NSObject {
     private var cancellable: AnyCancellable?
     private var localMonitor: Any?
     private var globalMonitor: Any?
-    private var pendingResize: DispatchWorkItem?
 
     var onWillShow: (() -> Void)?
 
@@ -41,7 +40,9 @@ final class StatusPanelController: NSObject {
         cancellable = model.$expandedIsland
             .removeDuplicates()
             .sink { [weak self] expandedIsland in
-                self?.resizeForContent(expandedIsland: expandedIsland)
+                DispatchQueue.main.async {
+                    self?.resizeForContent(expandedIsland: expandedIsland)
+                }
             }
     }
 
@@ -100,7 +101,6 @@ final class StatusPanelController: NSObject {
         expandedIsland: StatusIsland?,
         animated: Bool = true
     ) {
-        pendingResize?.cancel()
         guard panel.isVisible || !animated else { return }
 
         let targetHeight: CGFloat
@@ -110,28 +110,28 @@ final class StatusPanelController: NSObject {
         case .inputSource: targetHeight = 560
         case nil: targetHeight = 286
         }
-        if animated, targetHeight < panel.frame.height {
-            let work = DispatchWorkItem { [weak self] in
-                guard let self, self.model.expandedIsland == expandedIsland else { return }
-                self.setPanelHeight(targetHeight)
-            }
-            pendingResize = work
-            DispatchQueue.main.asyncAfter(
-                deadline: .now() + StatusMotion.expansionDuration,
-                execute: work
-            )
-            return
-        }
-
-        setPanelHeight(targetHeight)
+        setPanelHeight(targetHeight, animated: animated)
     }
 
-    private func setPanelHeight(_ height: CGFloat) {
+    private func setPanelHeight(_ height: CGFloat, animated: Bool) {
+        guard abs(panel.frame.height - height) > 0.5 else { return }
         var frame = panel.frame
         let top = frame.maxY
         frame.size = NSSize(width: 360, height: height)
         frame.origin.y = top - frame.height
-        panel.setFrame(frame, display: true)
+
+        guard animated,
+              !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
+            panel.setFrame(frame, display: true)
+            return
+        }
+
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = StatusMotion.expansionDuration
+            context.timingFunction = StatusMotion.expansionTimingFunction
+            context.allowsImplicitAnimation = true
+            panel.animator().setFrame(frame, display: true)
+        }
     }
 
     private func positionPanel() {
@@ -174,7 +174,6 @@ final class StatusPanelController: NSObject {
     }
 
     deinit {
-        pendingResize?.cancel()
         if let localMonitor { NSEvent.removeMonitor(localMonitor) }
         if let globalMonitor { NSEvent.removeMonitor(globalMonitor) }
     }
