@@ -34,7 +34,6 @@ final class PowerModeController {
 
     private let service = SMAppService.daemon(plistName: PowerModeService.plistName)
     private let readQueue = DispatchQueue(label: "StatusArc.PowerModeReader", qos: .utility)
-    private let registeredVersionKey = "PowerModeService.registeredImplementationVersion"
 
     private(set) var status = PowerModeStatus.initial {
         didSet {
@@ -59,7 +58,6 @@ final class PowerModeController {
     func start() {
         updateServiceState()
         refresh()
-        refreshRegistrationIfNeeded()
     }
 
     func stop() {
@@ -173,7 +171,6 @@ final class PowerModeController {
 
         do {
             try service.register()
-            recordRegisteredVersion()
             updateServiceState()
 
             if service.status == .enabled {
@@ -189,7 +186,6 @@ final class PowerModeController {
                 didEnableCurrentService()
             } else if service.status == .requiresApproval
                         || errorCode == Int(kSMErrorLaunchDeniedByUser) {
-                recordRegisteredVersion()
                 status.isChanging = false
                 requestApproval()
             } else {
@@ -198,43 +194,20 @@ final class PowerModeController {
         }
     }
 
-    private func refreshRegistrationIfNeeded() {
-        guard service.status == .enabled || service.status == .requiresApproval,
-              UserDefaults.standard.integer(forKey: registeredVersionKey)
-                != PowerModeService.implementationVersion else {
-            return
-        }
-
-        status.isChanging = true
-        service.unregister { [weak self] error in
-            DispatchQueue.main.async {
-                guard let self else { return }
-                if let error,
-                   (error as NSError).code != Int(kSMErrorJobNotFound) {
-                    self.fail(error)
-                    return
-                }
-
-                self.connection?.invalidate()
-                self.connection = nil
-                self.registerService()
-            }
-        }
-    }
-
     private func didEnableCurrentService() {
-        recordRegisteredVersion()
         status.isChanging = false
         if pendingMode != nil {
             applyPendingMode()
         }
     }
 
-    private func recordRegisteredVersion() {
-        UserDefaults.standard.set(
-            PowerModeService.implementationVersion,
-            forKey: registeredVersionKey
-        )
+    private var helperExecutableURL: URL {
+        Bundle.main.bundleURL
+            .appendingPathComponent("Contents/MacOS/StatusArcPowerHelper")
+    }
+
+    private var currentHelperRequirement: String? {
+        CodeSigningRequirement.forCode(at: helperExecutableURL)
     }
 
     private func requestApproval() {
@@ -272,7 +245,6 @@ final class PowerModeController {
         approvalTimer?.invalidate()
         approvalTimer = nil
         approvalDeadline = nil
-        recordRegisteredVersion()
         prepareRunningHelperIfNeeded {
             self.applyPendingMode()
         }
@@ -298,12 +270,10 @@ final class PowerModeController {
     }
 
     private var bundledServiceIsPresent: Bool {
-        let helperURL = Bundle.main.bundleURL
-            .appendingPathComponent("Contents/MacOS/StatusArcPowerHelper")
         let plistURL = Bundle.main.bundleURL
             .appendingPathComponent("Contents/Library/LaunchDaemons")
             .appendingPathComponent(PowerModeService.plistName)
-        return FileManager.default.isExecutableFile(atPath: helperURL.path)
+        return FileManager.default.isExecutableFile(atPath: helperExecutableURL.path)
             && FileManager.default.fileExists(atPath: plistURL.path)
     }
 
@@ -436,9 +406,7 @@ final class PowerModeController {
             return connection
         }
 
-        let helperURL = Bundle.main.bundleURL
-            .appendingPathComponent("Contents/MacOS/StatusArcPowerHelper")
-        guard let helperRequirement = CodeSigningRequirement.forCode(at: helperURL) else {
+        guard let helperRequirement = currentHelperRequirement else {
             throw PowerModeControllerError.message(
                 "StatusArc could not verify its Energy Mode helper."
             )
