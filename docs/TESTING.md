@@ -136,6 +136,13 @@ panel label rather than claiming active charging.
   networks, and Network and Wi-Fi Settings destinations.
 - Confirm Battery shows its percentage and power state without Energy Mode
   controls, administrator prompts, or registering a new Login Items entry.
+- Confirm Battery's passive icon has a dimmed backing and the Battery island
+  does not react on hover. Connectivity and Input Source should show subtle
+  hover feedback because they expand.
+- In expanded islands, confirm collapsible headers, selectable networks and
+  input sources, and available action rows highlight on hover. Current or
+  unavailable rows must remain visually still and use dimmed icon backings
+  where present.
 - On macOS 26 or later, confirm the islands use Liquid Glass and matched
   expansion transitions. On macOS 13–25, confirm they use semantic material
   with readable text and smooth state changes.

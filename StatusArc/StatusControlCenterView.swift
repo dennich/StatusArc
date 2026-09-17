@@ -5,6 +5,7 @@ struct StatusControlCenterView: View {
     @ObservedObject var model: StatusControlCenterModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Namespace private var glassNamespace
+    @State private var hoveredIsland: StatusIsland?
 
     var body: some View {
         Group {
@@ -60,7 +61,11 @@ struct StatusControlCenterView: View {
 
     @ViewBuilder
     private func compactIsland(_ kind: StatusIsland) -> some View {
-        islandSurface(kind, expanded: false) {
+        islandSurface(
+            kind,
+            expanded: false,
+            isHovered: hoveredIsland == kind
+        ) {
             compactHeader(for: kind)
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -68,9 +73,15 @@ struct StatusControlCenterView: View {
         }
         .overlay {
             FirstMouseButton(
-                accessibilityLabel: "Open \(kind.accessibilityName) controls"
+                accessibilityLabel: "Open \(kind.accessibilityName) controls",
+                onHover: { hovered in updateCompactHover(hovered, for: kind) }
             ) {
                 toggleIsland(kind)
+            }
+        }
+        .onDisappear {
+            if hoveredIsland == kind {
+                hoveredIsland = nil
             }
         }
     }
@@ -87,7 +98,8 @@ struct StatusControlCenterView: View {
                 title: "Battery",
                 subtitle: model.batteryState,
                 trailing: model.batteryPercentage.map { "\($0)%" } ?? "—",
-                showsDisclosure: showsDisclosure
+                showsDisclosure: showsDisclosure,
+                emphasizesIcon: false
             )
         case .connectivity:
             CompactIslandHeader(
@@ -121,12 +133,22 @@ struct StatusControlCenterView: View {
     private func islandSurface<Content: View>(
         _ kind: StatusIsland,
         expanded: Bool,
+        isHovered: Bool = false,
         @ViewBuilder content: () -> Content
     ) -> some View {
         let shape = RoundedRectangle(cornerRadius: expanded ? 24 : 30, style: .continuous)
         let base = content()
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(shape)
+            .background {
+                shape.fill(isHovered ? Color.primary.opacity(0.07) : .clear)
+            }
+            .overlay {
+                shape.stroke(
+                    isHovered ? Color.white.opacity(0.16) : .clear,
+                    lineWidth: 0.7
+                )
+            }
 
         if #available(macOS 26.0, *) {
             base
@@ -263,6 +285,16 @@ struct StatusControlCenterView: View {
         model.toggle(island)
     }
 
+    private func updateCompactHover(_ hovered: Bool, for island: StatusIsland) {
+        withAnimation(reduceMotion ? nil : StatusMotion.hover) {
+            if hovered {
+                hoveredIsland = island
+            } else if hoveredIsland == island {
+                hoveredIsland = nil
+            }
+        }
+    }
+
     private func toggleLaunchAtLogin() {
         model.setLaunchAtLogin?(model.launchAtLoginStatus != .enabled)
     }
@@ -302,11 +334,13 @@ struct StatusControlCenterView: View {
 
 private struct FirstMouseButton: NSViewRepresentable {
     let accessibilityLabel: String
+    let onHover: (Bool) -> Void
     let action: () -> Void
 
     func makeNSView(context: Context) -> FirstMouseClickView {
         let view = FirstMouseClickView()
         view.action = action
+        view.onHover = onHover
         view.setAccessibilityElement(true)
         view.setAccessibilityRole(.button)
         view.setAccessibilityLabel(accessibilityLabel)
@@ -315,12 +349,38 @@ private struct FirstMouseButton: NSViewRepresentable {
 
     func updateNSView(_ view: FirstMouseClickView, context: Context) {
         view.action = action
+        view.onHover = onHover
         view.setAccessibilityLabel(accessibilityLabel)
     }
 }
 
 private final class FirstMouseClickView: NSView {
     var action: () -> Void = {}
+    var onHover: (Bool) -> Void = { _ in }
+    private var hoverTrackingArea: NSTrackingArea?
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let hoverTrackingArea {
+            removeTrackingArea(hoverTrackingArea)
+        }
+        let trackingArea = NSTrackingArea(
+            rect: .zero,
+            options: [.activeAlways, .inVisibleRect, .mouseEnteredAndExited],
+            owner: self,
+            userInfo: nil
+        )
+        hoverTrackingArea = trackingArea
+        addTrackingArea(trackingArea)
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        onHover(true)
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        onHover(false)
+    }
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
         true
@@ -360,6 +420,7 @@ private struct CompactIslandHeader: View {
     var trailing: String? = nil
     var badge: String? = nil
     var showsDisclosure = true
+    var emphasizesIcon = true
 
     var body: some View {
         HStack(spacing: 12) {
@@ -373,9 +434,13 @@ private struct CompactIslandHeader: View {
                         .symbolRenderingMode(.hierarchical)
                 }
             }
-            .foregroundStyle(.tint)
+            .foregroundStyle(emphasizesIcon ? Color.accentColor : Color.secondary)
             .frame(width: 42, height: 42)
-            .background(.white, in: Circle())
+            .background {
+                Circle().fill(
+                    emphasizesIcon ? Color.white : Color.primary.opacity(0.08)
+                )
+            }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.headline)
@@ -413,8 +478,13 @@ private struct InputSourceSelectionRow: View {
             HStack(spacing: 11) {
                 Text(source.label)
                     .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(source.isCurrent ? Color.secondary : Color.primary)
                     .frame(width: 28, height: 22)
-                    .background(.white, in: RoundedRectangle(cornerRadius: 5))
+                    .background {
+                        RoundedRectangle(cornerRadius: 5).fill(
+                            source.isCurrent ? Color.primary.opacity(0.08) : Color.white
+                        )
+                    }
                 Text(source.name)
                 Spacer()
                 if source.isCurrent {
@@ -426,17 +496,12 @@ private struct InputSourceSelectionRow: View {
             .padding(.vertical, 6)
         }
         .buttonStyle(.plain)
-        .background(
-            isHovered ? Color.primary.opacity(0.085) : .clear,
-            in: RoundedRectangle(cornerRadius: 10)
-        )
-        .overlay {
-            if isHovered {
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(.white.opacity(0.12), lineWidth: 0.7)
-            }
-        }
+        .statusHoverHighlight(isHovered && !source.isCurrent)
         .onHover { hovered in
+            guard !source.isCurrent else {
+                isHovered = false
+                return
+            }
             withAnimation(reduceMotion ? nil : StatusMotion.hover) {
                 isHovered = hovered
             }
@@ -456,6 +521,8 @@ private struct IslandHeader: View {
     var showsToggle = true
     var toggleDisabled = false
     let action: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isHovered = false
 
     var body: some View {
         let inset: CGFloat = expanded ? 18 : 14
@@ -505,6 +572,12 @@ private struct IslandHeader: View {
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
+        .statusHoverHighlight(isHovered, cornerRadius: expanded ? 20 : 26)
+        .onHover { hovered in
+            withAnimation(reduceMotion ? nil : StatusMotion.hover) {
+                isHovered = hovered
+            }
+        }
         .overlay(alignment: .trailing) {
             if showsToggle, let toggle {
                 Toggle("", isOn: toggle)
@@ -540,6 +613,8 @@ private struct NetworkSection: View {
 private struct NetworkRow: View {
     let network: StatusNetworkRow
     let action: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isHovered = false
 
     var body: some View {
         Button(action: action) {
@@ -564,6 +639,16 @@ private struct NetworkRow: View {
         .buttonStyle(.plain)
         .padding(.horizontal, 7)
         .padding(.vertical, 5)
+        .statusHoverHighlight(isHovered && !network.isCurrent)
+        .onHover { hovered in
+            guard !network.isCurrent else {
+                isHovered = false
+                return
+            }
+            withAnimation(reduceMotion ? nil : StatusMotion.hover) {
+                isHovered = hovered
+            }
+        }
         .accessibilityLabel("\(network.name), signal \(network.strength) of 3\(network.isSecured ? ", secured" : "")")
     }
 
@@ -580,6 +665,9 @@ private struct ActionRow: View {
     let title: String
     let symbol: String
     let action: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.isEnabled) private var isEnabled
+    @State private var isHovered = false
 
     var body: some View {
         Button(action: action) {
@@ -589,5 +677,34 @@ private struct ActionRow: View {
                 .padding(.vertical, 3)
         }
         .buttonStyle(.plain)
+        .statusHoverHighlight(isHovered && isEnabled)
+        .onHover { hovered in
+            guard isEnabled else {
+                isHovered = false
+                return
+            }
+            withAnimation(reduceMotion ? nil : StatusMotion.hover) {
+                isHovered = hovered
+            }
+        }
+    }
+}
+
+private extension View {
+    func statusHoverHighlight(
+        _ isHighlighted: Bool,
+        cornerRadius: CGFloat = 10
+    ) -> some View {
+        background {
+            RoundedRectangle(cornerRadius: cornerRadius)
+                .fill(isHighlighted ? Color.primary.opacity(0.085) : .clear)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: cornerRadius)
+                .stroke(
+                    isHighlighted ? Color.white.opacity(0.12) : .clear,
+                    lineWidth: 0.7
+                )
+        }
     }
 }
