@@ -27,6 +27,8 @@
 		A10000000000000000000018 /* StatusControlCenterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000019 /* StatusControlCenterView.swift */; };
 		A10000000000000000000019 /* StatusPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000020 /* StatusPanelController.swift */; };
 		A10000000000000000000020 /* StatusMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000021 /* StatusMotion.swift */; };
+		A10000000000000000000021 /* LaunchAtLoginController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000022 /* LaunchAtLoginController.swift */; };
+		A10000000000000000000022 /* ServiceManagement.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A20000000000000000000023 /* ServiceManagement.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -51,6 +53,8 @@
 		A20000000000000000000019 /* StatusControlCenterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusControlCenterView.swift; sourceTree = "<group>"; };
 		A20000000000000000000020 /* StatusPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusPanelController.swift; sourceTree = "<group>"; };
 		A20000000000000000000021 /* StatusMotion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusMotion.swift; sourceTree = "<group>"; };
+		A20000000000000000000022 /* LaunchAtLoginController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginController.swift; sourceTree = "<group>"; };
+		A20000000000000000000023 /* ServiceManagement.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ServiceManagement.framework; path = System/Library/Frameworks/ServiceManagement.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -66,6 +70,7 @@
 				A10000000000000000000011 /* CoreLocation.framework in Frameworks */,
 				A10000000000000000000013 /* Sparkle in Frameworks */,
 				A10000000000000000000016 /* Network.framework in Frameworks */,
+				A10000000000000000000022 /* ServiceManagement.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -90,6 +95,7 @@
 				A20000000000000000000019 /* StatusControlCenterView.swift */,
 				A20000000000000000000020 /* StatusPanelController.swift */,
 				A20000000000000000000021 /* StatusMotion.swift */,
+				A20000000000000000000022 /* LaunchAtLoginController.swift */,
 				A20000000000000000000014 /* UpdateManager.swift */,
 				A20000000000000000000003 /* SystemStatusMonitor.swift */,
 				A20000000000000000000015 /* InputSourceIdentity.swift */,
@@ -111,6 +117,7 @@
 				A20000000000000000000011 /* SystemConfiguration.framework */,
 				A20000000000000000000013 /* CoreLocation.framework */,
 				A20000000000000000000017 /* Network.framework */,
+				A20000000000000000000023 /* ServiceManagement.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -209,6 +216,7 @@
 				A10000000000000000000018 /* StatusControlCenterView.swift in Sources */,
 				A10000000000000000000019 /* StatusPanelController.swift in Sources */,
 				A10000000000000000000020 /* StatusMotion.swift in Sources */,
+				A10000000000000000000021 /* LaunchAtLoginController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

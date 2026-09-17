@@ -100,6 +100,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     private let actions = SystemActions()
     private let renderer = StatusIconRenderer()
     private let updateManager = UpdateManager()
+    private let launchAtLoginController = LaunchAtLoginController()
     private let controlCenterModel = StatusControlCenterModel()
     private var panelController: StatusPanelController?
     private var expandedInterfaceDelegate: AnyObject?
@@ -288,6 +289,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         controlCenterModel.checkForUpdates = { [weak self] in
             self?.performPanelAction { $0.updateManager.checkForUpdates() }
         }
+        controlCenterModel.setLaunchAtLogin = { [weak self] enabled in
+            self?.setLaunchAtLogin(enabled)
+        }
         controlCenterModel.quit = { [weak self] in self?.quit() }
 
         if #available(macOS 27.0, *) {
@@ -441,6 +445,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
             keyboardViewerAvailable: actions.keyboardViewerSource() != nil,
             availableUpdate: updateManager.availableVersion
         )
+        controlCenterModel.updateLaunchAtLogin(launchAtLoginController.status)
+    }
+
+    private func setLaunchAtLogin(_ enabled: Bool) {
+        do {
+            let status = try launchAtLoginController.setEnabled(enabled)
+            controlCenterModel.updateLaunchAtLogin(status)
+
+            if status == .requiresApproval {
+                panelController?.requestClose()
+                launchAtLoginController.openSystemSettings()
+            }
+        } catch {
+            controlCenterModel.updateLaunchAtLogin(launchAtLoginController.status)
+            showError(error, title: "Couldn’t Change Launch at Login")
+        }
     }
 
     private func updateStatusIcon(_ snapshot: StatusSnapshot) {

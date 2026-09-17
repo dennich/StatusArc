@@ -27,6 +27,12 @@ services independently of StatusArc.
 Battery state is read locally from IOKit power-source APIs.
 StatusArc does not change Energy Mode or install a privileged helper.
 
+## Launch at Login
+
+When you enable Launch at Login, StatusArc asks macOS to register the main app
+as a per-user Login Item. This setting is managed by macOS and does not install
+a helper, request administrator access, or transmit data.
+
 ## Network information
 
 StatusArc reads the primary active interface from SystemConfiguration and reads

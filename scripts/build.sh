@@ -7,5 +7,6 @@ xcodebuild \
   -project StatusArc.xcodeproj \
   -target StatusArc \
   -configuration Debug \
-  CODE_SIGNING_ALLOWED=NO \
+  CODE_SIGNING_ALLOWED=YES \
+  CODE_SIGN_IDENTITY=- \
   build

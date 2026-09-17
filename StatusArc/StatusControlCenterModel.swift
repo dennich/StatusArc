@@ -45,6 +45,7 @@ final class StatusControlCenterModel: ObservableObject {
     @Published private(set) var keyboardViewerAvailable = false
 
     @Published private(set) var updateTitle = "Check for Updates…"
+    @Published private(set) var launchAtLoginStatus: LaunchAtLoginStatus = .disabled
 
     var setWiFiPower: ((Bool) -> Void)?
     var disconnectWiFi: (() -> Void)?
@@ -59,6 +60,7 @@ final class StatusControlCenterModel: ObservableObject {
     var openWirelessDiagnostics: (() -> Void)?
     var openKeyboardSettings: (() -> Void)?
     var checkForUpdates: (() -> Void)?
+    var setLaunchAtLogin: ((Bool) -> Void)?
     var quit: (() -> Void)?
 
     var panelHeight: CGFloat {
@@ -118,6 +120,10 @@ final class StatusControlCenterModel: ObservableObject {
         self.inputSources = inputSources
         self.keyboardViewerAvailable = keyboardViewerAvailable
         updateTitle = availableUpdate.map { "Update to \($0)…" } ?? "Check for Updates…"
+    }
+
+    func updateLaunchAtLogin(_ status: LaunchAtLoginStatus) {
+        launchAtLoginStatus = status
     }
 
     private static func networkTitle(for status: NetworkStatus) -> String {

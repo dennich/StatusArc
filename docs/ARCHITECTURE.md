@@ -72,6 +72,11 @@ Hosts SwiftUI in a transient AppKit panel, anchors it below the status item,
 tracks dynamic height, and handles native expanded-interface, outside-click,
 and Escape dismissal.
 
+## `LaunchAtLoginController.swift`
+
+Uses `SMAppService.mainApp` to register or unregister the main StatusArc app as
+a per-user Login Item. It does not install a helper, launch agent, or daemon.
+
 ## `SystemStatusMonitor.swift`
 
 Reads passive system state:

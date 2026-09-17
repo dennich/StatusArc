@@ -146,6 +146,12 @@ panel label rather than claiming active charging.
   item again dismisses it.
 - Confirm Network Settings, Keyboard Settings, Emoji & Symbols, and Wireless
   Diagnostics invoke the available public system actions.
+- Enable Launch at Login and confirm the item shows a checkmark and StatusArc is
+  listed in System Settings → General → Login Items & Extensions. Sign out and
+  back in, or restart the Mac, and confirm StatusArc starts automatically.
+- Disable Launch at Login and confirm the checkmark and macOS Login Item are
+  removed. If macOS requires approval, confirm the menu option opens the Login
+  Items settings page.
 - Confirm the panel uses only public SwiftUI/AppKit materials and controls.
 
 ## Settings shortcuts

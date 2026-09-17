@@ -5,6 +5,7 @@ All notable user-visible changes to StatusArc are documented here.
 ## [Unreleased]
 
 ### Changed
+- The compact panel now includes a Launch at Login option backed by macOS Login Items. It registers only the main StatusArc app and does not install a helper. Local command-line builds are ad-hoc signed so the option works without Apple Developer Program membership.
 - Battery is now a passive at-a-glance island. The Energy Mode switcher and privileged helper have been removed, so StatusArc no longer requests Login Items approval for power-policy changes.
 - Wi-Fi joins now check only the user keychain for saved passwords. If none is available, StatusArc asks for the password without requesting administrator access to the System keychain.
 - Battery, network, and input-source changes now refresh from macOS events, with a low-frequency recovery refresh, instead of waiting for one-second polling.

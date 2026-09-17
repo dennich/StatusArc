@@ -101,6 +101,11 @@ supported versions.
 - Show `Update to <version>…` when a newer release is available
 - Download, verify, install, and relaunch through Sparkle only after user action
 
+**Application**
+- Optional Launch at Login control in the compact panel
+- Uses the native per-user macOS Login Items service without a helper or administrator access
+- Install StatusArc in `/Applications` before enabling Launch at Login so macOS has a stable app location
+
 ## Requirements
 
 - macOS 13 or later
@@ -122,14 +127,16 @@ item and system integration; SwiftUI renders the expandable islands.
 If Xcode asks for signing, choose your own development team under
 **Target → Signing & Capabilities → Team**.
 
-For a command-line unsigned development build:
+For a command-line development build with a local ad-hoc signature:
 
 ```bash
 ./scripts/build.sh
 ```
 
 The repository intentionally does not contain a developer-team identifier,
-certificate, provisioning profile, or signing secret.
+certificate, provisioning profile, or signing secret. The ad-hoc signature does
+not require Apple Developer Program membership and allows native features such
+as Launch at Login to work in personal builds.
 
 ## Permissions and privacy
 

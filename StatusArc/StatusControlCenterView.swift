@@ -32,6 +32,12 @@ struct StatusControlCenterView: View {
                 compactIsland(.inputSource)
 
                 HStack(spacing: 8) {
+                    Button(action: toggleLaunchAtLogin) {
+                        Label(launchAtLoginTitle, systemImage: launchAtLoginSymbol)
+                            .lineLimit(1)
+                    }
+                    .accessibilityValue(launchAtLoginAccessibilityValue)
+                    .help("Open StatusArc automatically when you sign in")
                     Button(model.updateTitle) { model.checkForUpdates?() }
                     Spacer()
                     Button("Quit") { model.quit?() }
@@ -255,6 +261,41 @@ struct StatusControlCenterView: View {
 
     private func toggleIsland(_ island: StatusIsland) {
         model.toggle(island)
+    }
+
+    private func toggleLaunchAtLogin() {
+        model.setLaunchAtLogin?(model.launchAtLoginStatus != .enabled)
+    }
+
+    private var launchAtLoginTitle: String {
+        switch model.launchAtLoginStatus {
+        case .disabled, .enabled:
+            return "Launch at Login"
+        case .requiresApproval:
+            return "Allow at Login…"
+        }
+    }
+
+    private var launchAtLoginSymbol: String {
+        switch model.launchAtLoginStatus {
+        case .disabled:
+            return "square"
+        case .enabled:
+            return "checkmark.square.fill"
+        case .requiresApproval:
+            return "exclamationmark.triangle"
+        }
+    }
+
+    private var launchAtLoginAccessibilityValue: String {
+        switch model.launchAtLoginStatus {
+        case .disabled:
+            return "Off"
+        case .enabled:
+            return "On"
+        case .requiresApproval:
+            return "Requires approval in System Settings"
+        }
     }
 
 }
