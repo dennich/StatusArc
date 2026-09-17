@@ -25,13 +25,7 @@ services independently of StatusArc.
 ## Battery and power information
 
 Battery state is read locally from IOKit power-source APIs.
-
-Changing Energy Mode requires root access because macOS restricts power-policy
-changes. StatusArc registers a bundled launch daemon through Apple's Service
-Management framework after explicit user approval. The helper accepts only a
-fixed Energy Mode and power-source value, runs the system `pmset` tool with
-fixed arguments, verifies the resulting local setting, and returns the result
-to StatusArc. It does not read or transmit credentials or user data.
+StatusArc does not change Energy Mode or install a privileged helper.
 
 ## Network information
 

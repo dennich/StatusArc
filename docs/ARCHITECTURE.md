@@ -61,9 +61,10 @@ actions to `SystemActions`.
 
 ## `StatusControlCenterModel.swift` and `StatusControlCenterView.swift`
 
-Model and render the three expandable component islands. The model contains no
-CoreWLAN or Text Input Source objects; stable row identifiers route actions back
-through `AppDelegate`.
+Model and render the three component islands. Battery is a passive compact
+status card; Connectivity and Input Source expand for controls. The model
+contains no CoreWLAN or Text Input Source objects; stable row identifiers route
+actions back through `AppDelegate`.
 
 ## `StatusPanelController.swift`
 

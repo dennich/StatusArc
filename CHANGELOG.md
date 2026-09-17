@@ -5,16 +5,16 @@ All notable user-visible changes to StatusArc are documented here.
 ## [Unreleased]
 
 ### Changed
-- Energy Mode changes use a narrowly scoped Service Management helper with one-time macOS approval. The helper verifies each requested setting, and the interface times out cleanly instead of loading indefinitely.
+- Battery is now a passive at-a-glance island. The Energy Mode switcher and privileged helper have been removed, so StatusArc no longer requests Login Items approval for power-policy changes.
 - Wi-Fi joins now check only the user keychain for saved passwords. If none is available, StatusArc asks for the password without requesting administrator access to the System keychain.
 - Battery, network, and input-source changes now refresh from macOS events, with a low-frequency recovery refresh, instead of waiting for one-second polling.
 - External power that is paused, complete, or not actively charging now uses a larger vertical plug accessory in a 36-point item, with visual weight comparable to the charging bolt and an accurate battery menu label.
 - The center input indicator now uses a compact label derived from native Text Input Source metadata instead of a fixed two-letter country-code rule; menus and accessibility use the full localized source name.
 - Battery, Connectivity, and Input Source now appear as three directly switchable islands in a SwiftUI-hosted AppKit panel. This removes nested submenu tracking while preserving the existing public system actions.
 - Islands use matched Liquid Glass transitions on supported macOS versions and semantic system material on earlier versions. Reduce Motion is respected, and outside click or Escape dismisses the panel.
-- Battery shows visible circular Energy Mode symbols, Connectivity uses a system toggle and inline network list, and Input Source shows complete native names with compact source badges.
+- Connectivity uses a system toggle and inline network list, and Input Source shows complete native names with compact source badges.
 - The battery track now uses a 10-point radius and a 220-degree arc; the network dots and Ethernet line sit lower in the resulting bottom gap.
-- Island morphs now run inside a pre-sized SwiftUI glass canvas. The transparent AppKit panel changes size outside the rendered transition, avoiding competing window and glass animations. Energy Mode rows use native hover feedback, and the bolt/plug accessories sit 2 points farther right.
+- Island morphs now run inside a pre-sized SwiftUI glass canvas. The transparent AppKit panel changes size outside the rendered transition, avoiding competing window and glass animations. The bolt/plug accessories sit 2 points farther right.
 - Compact islands use a full-width AppKit first-click target above the morphing glass surface, so a single click opens them even when the nonactivating panel has just appeared; the Wi-Fi switch remains an independent native control.
 - One- and two-letter input-source labels use the same 9.5-point size and remain optically centered.
 - Wi-Fi controls now expose scanning, connecting, disconnecting, and power-transition states and prevent duplicate actions while an operation is in progress.

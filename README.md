@@ -64,8 +64,8 @@ interface reported by macOS instead of blindly preferring one.
 ## Features
 
 Clicking the StatusArc icon opens three component islands for Battery,
-Connectivity, and Input Source. Selecting an island expands it in place, and
-selecting another moves directly between components without submenu tracking.
+Connectivity, and Input Source. Battery remains an at-a-glance status card;
+Connectivity and Input Source expand in place without submenu tracking.
 The islands use public Liquid Glass and matched transitions on supported macOS
 versions, with semantic system material and reduced-motion behavior on earlier
 supported versions.
@@ -73,13 +73,7 @@ supported versions.
 **Battery**
 - Current battery percentage
 - Charging / fully charged state
-- Current power source
-- Time remaining when macOS provides it
-- Current Automatic, Low Power, or High Power energy-mode state when supported
-- Circular native battery symbols for Automatic, Low Power, and High Power
-- Direct Energy Mode controls through a narrowly scoped, user-approved helper
-- Shortcut to energy details in Activity Monitor
-- Shortcut to Battery Settings
+- Passive Low Power Mode indication in the menu-bar arc
 
 **Network**
 - Wi-Fi on/off through a native AppKit switch
@@ -170,11 +164,9 @@ See [PRIVACY.md](PRIVACY.md) for more detail.
   standard AppKit controls because CoreWLAN provides the action but no system
   join UI.
 - Apple does not expose public third-party controls for Charge to Full Now,
-  enumerating significant-energy apps, or toggling Show Input Source Name.
-  Energy Mode changes use a narrowly scoped launch daemon registered with
-  Service Management. macOS requires one-time administrator approval in Login
-  Items; afterward the helper accepts only Automatic, Low Power, and High Power
-  requests for the active power source.
+  changing Energy Mode, enumerating significant-energy apps, or toggling Show
+  Input Source Name. StatusArc passively reflects Low Power Mode in the menu-bar
+  arc but leaves power-policy changes to macOS.
 - Enterprise/802.1X Wi-Fi is handed off to macOS Wi-Fi Settings because
   identities, certificates, and managed credentials are better handled by the
   system.

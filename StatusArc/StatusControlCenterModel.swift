@@ -31,14 +31,6 @@ final class StatusControlCenterModel: ObservableObject {
 
     @Published private(set) var batteryPercentage: Int?
     @Published private(set) var batteryState = "Not available"
-    @Published private(set) var powerSource = "—"
-    @Published private(set) var lowPowerModeEnabled: Bool?
-    @Published private(set) var energyMode: EnergyMode?
-    @Published private(set) var energyModeCapabilitiesKnown = false
-    @Published private(set) var supportsLowPowerMode = false
-    @Published private(set) var supportsHighPowerMode = false
-    @Published private(set) var energyModeChanging = false
-    @Published private(set) var powerModeControlState: PowerModeControlState = .notConfigured
 
     @Published private(set) var networkTitle = "Connectivity"
     @Published private(set) var networkDetail = "Disconnected"
@@ -62,10 +54,6 @@ final class StatusControlCenterModel: ObservableObject {
     var selectInputSource: ((Int) -> Void)?
     var showEmojiAndSymbols: (() -> Void)?
     var showKeyboardViewer: (() -> Void)?
-    var selectEnergyMode: ((EnergyMode) -> Void)?
-    var openEnergyModeApproval: (() -> Void)?
-    var openBatterySettings: (() -> Void)?
-    var openActivityMonitor: (() -> Void)?
     var openWiFiSettings: (() -> Void)?
     var openNetworkSettings: (() -> Void)?
     var openWirelessDiagnostics: (() -> Void)?
@@ -75,7 +63,7 @@ final class StatusControlCenterModel: ObservableObject {
 
     var panelHeight: CGFloat {
         switch expandedIsland {
-        case .battery: return 548
+        case .battery: return 286
         case .connectivity: return 620
         case .inputSource: return 560
         case nil: return 286
@@ -83,6 +71,7 @@ final class StatusControlCenterModel: ObservableObject {
     }
 
     func toggle(_ island: StatusIsland) {
+        guard island != .battery else { return }
         if let requestIslandToggle {
             requestIslandToggle(island)
         } else {
@@ -102,8 +91,6 @@ final class StatusControlCenterModel: ObservableObject {
     ) {
         if let battery = snapshot.battery {
             batteryPercentage = battery.displayedPercentage
-            powerSource = battery.powerSource
-            lowPowerModeEnabled = battery.isLowPowerModeEnabled
 
             switch battery.powerState {
             case .onBattery: batteryState = "On Battery"
@@ -118,8 +105,6 @@ final class StatusControlCenterModel: ObservableObject {
         } else {
             batteryPercentage = nil
             batteryState = "Not available"
-            powerSource = "—"
-            lowPowerModeEnabled = nil
         }
 
         networkTitle = Self.networkTitle(for: snapshot.network)
@@ -133,15 +118,6 @@ final class StatusControlCenterModel: ObservableObject {
         self.inputSources = inputSources
         self.keyboardViewerAvailable = keyboardViewerAvailable
         updateTitle = availableUpdate.map { "Update to \($0)…" } ?? "Check for Updates…"
-    }
-
-    func updatePowerMode(_ status: PowerModeStatus) {
-        energyMode = status.currentMode
-        energyModeCapabilitiesKnown = status.capabilitiesKnown
-        supportsLowPowerMode = status.supportsLowPowerMode
-        supportsHighPowerMode = status.supportsHighPowerMode
-        energyModeChanging = status.isChanging
-        powerModeControlState = status.controlState
     }
 
     private static func networkTitle(for status: NetworkStatus) -> String {

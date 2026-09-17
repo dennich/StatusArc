@@ -2,10 +2,6 @@ import AppKit
 import Carbon
 import CoreWLAN
 
-private enum EnergyModeVisual {
-    case automatic, lowPower, highPower
-}
-
 private final class ControlCenterMenuSurface: NSView {
     let content = NSView()
 
@@ -89,45 +85,6 @@ private final class WiFiMenuControlView: NSView {
     }
 }
 
-private final class BatterySummaryMenuView: NSView {
-    private let titleLabel = NSTextField(labelWithString: "Battery")
-    private let percentageLabel = NSTextField(labelWithString: "—")
-
-    init() {
-        super.init(frame: NSRect(x: 0, y: 0, width: 280, height: 38))
-
-        let surface = ControlCenterMenuSurface(
-            frame: bounds.insetBy(dx: 4, dy: 2),
-            interactive: false
-        )
-        surface.autoresizingMask = [.width, .height]
-        addSubview(surface)
-
-        titleLabel.font = .systemFont(ofSize: NSFont.systemFontSize, weight: .semibold)
-        percentageLabel.font = .systemFont(ofSize: NSFont.systemFontSize)
-        percentageLabel.textColor = .secondaryLabelColor
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        percentageLabel.translatesAutoresizingMaskIntoConstraints = false
-        surface.content.addSubview(titleLabel)
-        surface.content.addSubview(percentageLabel)
-
-        NSLayoutConstraint.activate([
-            titleLabel.leadingAnchor.constraint(equalTo: surface.content.leadingAnchor, constant: 10),
-            titleLabel.centerYAnchor.constraint(equalTo: surface.content.centerYAnchor),
-            percentageLabel.trailingAnchor.constraint(equalTo: surface.content.trailingAnchor, constant: -10),
-            percentageLabel.centerYAnchor.constraint(equalTo: surface.content.centerYAnchor)
-        ])
-    }
-
-    required init?(coder: NSCoder) {
-        nil
-    }
-
-    func update(percentage: Int?) {
-        percentageLabel.stringValue = percentage.map { "\($0)%" } ?? "—"
-    }
-}
-
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemValidation {
     private enum WiFiOperation: Equatable {
@@ -143,7 +100,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     private let actions = SystemActions()
     private let renderer = StatusIconRenderer()
     private let updateManager = UpdateManager()
-    private let powerModeController = PowerModeController()
     private let controlCenterModel = StatusControlCenterModel()
     private var panelController: StatusPanelController?
     private var expandedInterfaceDelegate: AnyObject?
@@ -155,16 +111,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     private var inputSources: [TISInputSource] = []
     private var scannedNetworks: [CWNetwork] = []
     private var wifiOperation: WiFiOperation = .idle
-
-    private let batteryMenuItem = NSMenuItem(title: "Battery", action: nil, keyEquivalent: "")
-    private let batteryMenu = NSMenu(title: "Battery")
-    private let batterySummaryItem = NSMenuItem()
-    private let batterySummaryView = BatterySummaryMenuView()
-    private let batteryItem = NSMenuItem(title: "Battery", action: nil, keyEquivalent: "")
-    private let batteryPowerItem = NSMenuItem(title: "Power Source", action: nil, keyEquivalent: "")
-    private let automaticEnergyModeItem = NSMenuItem(title: "Automatic", action: nil, keyEquivalent: "")
-    private let lowPowerEnergyModeItem = NSMenuItem(title: "Low Power", action: nil, keyEquivalent: "")
-    private let highPowerEnergyModeItem = NSMenuItem(title: "High Power", action: nil, keyEquivalent: "")
 
     private let connectivityMenuItem = NSMenuItem(title: "Connectivity", action: nil, keyEquivalent: "")
     private let connectivityMenu = NSMenu(title: "Connectivity")
@@ -188,7 +134,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         configureStatusItem()
         configureMenu()
         configureControlCenter()
-        powerModeController.start()
 
         updateManager.onUpdateAvailabilityChanged = { [weak self] _ in
             self?.updateApplicationMenu()
@@ -218,7 +163,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         fallbackRefreshTimer?.invalidate()
         appearanceObservation?.invalidate()
         monitor.stopMonitoring()
-        powerModeController.stop()
         iconAnimation?.stop()
         panelController?.hide(animated: false)
         updateManager.stop()
@@ -249,43 +193,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         wifiNetworksMenu.autoenablesItems = false
         wifiDetailsMenu.autoenablesItems = false
         inputSourcesMenu.autoenablesItems = false
-        batteryMenu.autoenablesItems = false
-
-        batteryItem.isEnabled = false
-        batteryPowerItem.isEnabled = false
         networkItem.isEnabled = false
         versionItem.isEnabled = false
 
         // Apple does not expose its Control Center panels to third-party apps.
         // Standard AppKit submenus preserve native menu behavior. Small
         // standard AppKit views provide the public controls macOS exposes.
-        batteryMenuItem.submenu = batteryMenu
-        batterySummaryItem.view = batterySummaryView
-        batteryMenu.addItem(batterySummaryItem)
-        batteryMenu.addItem(batteryItem)
-        batteryMenu.addItem(batteryPowerItem)
-        batteryMenu.addItem(.separator())
-        batteryMenu.addItem(sectionItem("Energy Mode"))
-        for item in [
-            automaticEnergyModeItem,
-            lowPowerEnergyModeItem,
-            highPowerEnergyModeItem
-        ] {
-            item.isEnabled = false
-            item.toolTip = "macOS does not expose a public API for changing Energy Mode."
-            batteryMenu.addItem(item)
-        }
-        batteryMenu.addItem(.separator())
-        batteryMenu.addItem(actionItem(
-            "Energy Usage in Activity Monitor…",
-            #selector(openActivityMonitor)
-        ))
-        batteryMenu.addItem(actionItem(
-            "Battery Settings…",
-            #selector(openBatterySettings)
-        ))
-        menu.addItem(batteryMenuItem)
-
         connectivityMenuItem.submenu = connectivityMenu
         wifiToggleItem.view = wifiControlView
         wifiControlView.toggle.target = self
@@ -360,18 +273,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         controlCenterModel.showKeyboardViewer = { [weak self] in
             self?.performPanelAction { $0.showKeyboardViewer() }
         }
-        controlCenterModel.selectEnergyMode = { [weak self] mode in
-            self?.powerModeController.select(mode)
-        }
-        controlCenterModel.openEnergyModeApproval = { [weak self] in
-            self?.powerModeController.openApprovalSettings()
-        }
-        controlCenterModel.openBatterySettings = { [weak self] in
-            self?.performPanelAction { $0.openBatterySettings() }
-        }
-        controlCenterModel.openActivityMonitor = { [weak self] in
-            self?.performPanelAction { $0.openActivityMonitor() }
-        }
         controlCenterModel.openWiFiSettings = { [weak self] in
             self?.performPanelAction { $0.openWiFiSettings() }
         }
@@ -388,13 +289,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
             self?.performPanelAction { $0.updateManager.checkForUpdates() }
         }
         controlCenterModel.quit = { [weak self] in self?.quit() }
-
-        powerModeController.onStatusChange = { [weak self] status in
-            self?.controlCenterModel.updatePowerMode(status)
-        }
-        powerModeController.onError = { [weak self] error in
-            self?.showError(error, title: "Couldn’t Change Energy Mode")
-        }
 
         if #available(macOS 27.0, *) {
             let delegate = StatusExpandedInterfaceDelegate(panelController: controller)
@@ -482,18 +376,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         reconcileWiFiOperation()
         let snapshot = monitor.snapshot()
 
-        if let battery = snapshot.battery {
-            powerModeController.setPowerSource(
-                battery.isConnectedToExternalPower ? .powerAdapter : .battery
-            )
-        }
-        powerModeController.refresh()
-
         updateStatusIcon(snapshot)
         statusItem.button?.toolTip = snapshot.tooltip
         statusItem.button?.setAccessibilityValue(snapshot.tooltip)
 
-        updateBatteryMenu(snapshot)
         updateNetworkMenu(snapshot)
         updateInputMenu(snapshot)
         updateControlCenter(snapshot)
@@ -594,121 +480,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         // Resize the native item with the rendered frame, never scale its artwork.
         statusItem.length = image.size.width
         statusItem.button?.image = image
-    }
-
-    private func updateBatteryMenu(_ snapshot: StatusSnapshot) {
-        if let battery = snapshot.battery {
-            let percent = battery.displayedPercentage
-
-            var stateText: String
-            switch battery.powerState {
-            case .fullyCharged:
-                stateText = "Fully Charged"
-            case .charging:
-                stateText = "Charging"
-            case .connectedNotCharging:
-                stateText = "Not Charging"
-            case .onBattery:
-                stateText = "Battery"
-            }
-
-            if let minutes = battery.minutesRemaining {
-                stateText += " • \(formattedDuration(minutes))"
-            }
-
-            if battery.isLowPowerModeEnabled {
-                stateText += " • Low Power Mode"
-            }
-
-            batteryItem.title = stateText
-            batteryPowerItem.title = "Power Source: \(battery.powerSource)"
-            batteryMenuItem.title = "Battery: \(percent)%"
-            batterySummaryView.update(percentage: percent)
-            updateEnergyModeVisuals(lowPowerModeEnabled: battery.isLowPowerModeEnabled)
-        } else {
-            batteryItem.title = "Battery: Not available"
-            batteryPowerItem.title = "Power Source: —"
-            batteryMenuItem.title = "Battery"
-            batterySummaryView.update(percentage: nil)
-            updateEnergyModeVisuals(lowPowerModeEnabled: nil)
-        }
-    }
-
-    private func updateEnergyModeVisuals(lowPowerModeEnabled: Bool?) {
-        let modes: [(NSMenuItem, EnergyModeVisual, Bool)] = [
-            (automaticEnergyModeItem, .automatic, lowPowerModeEnabled == false),
-            (lowPowerEnergyModeItem, .lowPower, lowPowerModeEnabled == true),
-            (highPowerEnergyModeItem, .highPower, false)
-        ]
-
-        for (item, mode, selected) in modes {
-            item.image = energyModeImage(mode, selected: selected)
-            item.state = .off
-            item.setAccessibilityValue(selected ? "Selected" : "Not selected")
-        }
-    }
-
-    private func energyModeImage(
-        _ mode: EnergyModeVisual,
-        selected: Bool
-    ) -> NSImage {
-        let symbolNames: [String]
-        switch mode {
-        case .automatic:
-            symbolNames = ["battery.100percent", "battery.100"]
-        case .lowPower:
-            symbolNames = ["battery.25percent", "battery.25"]
-        case .highPower:
-            symbolNames = ["battery.100percent.bolt", "battery.100.bolt"]
-        }
-
-        let size = NSSize(width: 28, height: 28)
-        let image = NSImage(size: size, flipped: false) { rect in
-            let circle = rect.insetBy(dx: 2, dy: 2)
-            let fill = selected
-                ? NSColor.controlAccentColor
-                : NSColor.tertiaryLabelColor.withAlphaComponent(0.42)
-            fill.setFill()
-            NSBezierPath(ovalIn: circle).fill()
-
-            guard let baseSymbol = symbolNames.lazy.compactMap({
-                NSImage(systemSymbolName: $0, accessibilityDescription: nil)
-            }).first else {
-                return true
-            }
-
-            let foreground = selected ? NSColor.white : NSColor.secondaryLabelColor
-            let configuration = NSImage.SymbolConfiguration(pointSize: 12, weight: .medium)
-                .applying(.init(paletteColors: [foreground]))
-            guard let symbol = baseSymbol.withSymbolConfiguration(configuration),
-                  symbol.size.width > 0, symbol.size.height > 0 else {
-                return true
-            }
-
-            let maximum = NSSize(width: 16, height: 11)
-            let scale = min(
-                maximum.width / symbol.size.width,
-                maximum.height / symbol.size.height
-            )
-            let symbolSize = NSSize(
-                width: symbol.size.width * scale,
-                height: symbol.size.height * scale
-            )
-            symbol.draw(
-                in: NSRect(
-                    x: rect.midX - symbolSize.width / 2,
-                    y: rect.midY - symbolSize.height / 2,
-                    width: symbolSize.width,
-                    height: symbolSize.height
-                ),
-                from: .zero,
-                operation: .sourceOver,
-                fraction: 1
-            )
-            return true
-        }
-        image.isTemplate = false
-        return image
     }
 
     private func updateNetworkMenu(_ snapshot: StatusSnapshot) {
@@ -818,14 +589,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         } else {
             checkForUpdatesItem.title = "Check for Updates…"
         }
-    }
-
-    private func formattedDuration(_ minutes: Int) -> String {
-        let formatter = DateComponentsFormatter()
-        formatter.allowedUnits = [.hour, .minute]
-        formatter.unitsStyle = .abbreviated
-        formatter.zeroFormattingBehavior = .dropAll
-        return formatter.string(from: TimeInterval(minutes * 60)) ?? "\(minutes)m"
     }
 
     // MARK: - Wi-Fi controls
@@ -1461,21 +1224,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         openSettings(
             deepLink: "x-apple.systempreferences:com.apple.Keyboard-Settings.extension?InputSources"
         )
-    }
-
-    @objc private func openBatterySettings() {
-        openSettings(
-            deepLink: "x-apple.systempreferences:com.apple.Battery-Settings.extension"
-        )
-    }
-
-    @objc private func openActivityMonitor() {
-        let path = "/System/Applications/Utilities/Activity Monitor.app"
-        let url = URL(fileURLWithPath: path)
-
-        if FileManager.default.fileExists(atPath: path) {
-            NSWorkspace.shared.open(url)
-        }
     }
 
     @objc private func openLocationPrivacySettings() {

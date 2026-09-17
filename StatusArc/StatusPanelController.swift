@@ -90,6 +90,7 @@ final class StatusPanelController: NSObject {
     }
 
     private func toggleIsland(_ island: StatusIsland) {
+        guard island != .battery else { return }
         pendingCompactResize?.cancel()
         pendingCompactResize = nil
 
@@ -140,7 +141,7 @@ final class StatusPanelController: NSObject {
 
     private func height(for expandedIsland: StatusIsland?) -> CGFloat {
         switch expandedIsland {
-        case .battery: return 548
+        case .battery: return 286
         case .connectivity: return 620
         case .inputSource: return 560
         case nil: return 286

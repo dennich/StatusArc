@@ -27,7 +27,7 @@ struct StatusControlCenterView: View {
             if let expandedIsland = model.expandedIsland {
                 expandedIslandView(expandedIsland)
             } else {
-                compactIsland(.battery)
+                batteryIsland
                 compactIsland(.connectivity)
                 compactIsland(.inputSource)
 
@@ -41,6 +41,15 @@ struct StatusControlCenterView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .top)
+    }
+
+    private var batteryIsland: some View {
+        islandSurface(.battery, expanded: false) {
+            compactHeader(for: .battery, showsDisclosure: false)
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .accessibilityElement(children: .combine)
     }
 
     @ViewBuilder
@@ -61,14 +70,18 @@ struct StatusControlCenterView: View {
     }
 
     @ViewBuilder
-    private func compactHeader(for kind: StatusIsland) -> some View {
+    private func compactHeader(
+        for kind: StatusIsland,
+        showsDisclosure: Bool = true
+    ) -> some View {
         switch kind {
         case .battery:
             CompactIslandHeader(
                 symbol: "battery.100",
                 title: "Battery",
                 subtitle: model.batteryState,
-                trailing: model.batteryPercentage.map { "\($0)%" } ?? "—"
+                trailing: model.batteryPercentage.map { "\($0)%" } ?? "—",
+                showsDisclosure: showsDisclosure
             )
         case .connectivity:
             CompactIslandHeader(
@@ -90,7 +103,7 @@ struct StatusControlCenterView: View {
     private func expandedIslandView(_ kind: StatusIsland) -> some View {
         switch kind {
         case .battery:
-            islandSurface(kind, expanded: true) { batteryContent }
+            batteryIsland
         case .connectivity:
             islandSurface(kind, expanded: true) { connectivityContent }
         case .inputSource:
@@ -124,81 +137,6 @@ struct StatusControlCenterView: View {
                         ? .identity
                         : .scale(scale: 0.96).combined(with: .opacity)
                 )
-        }
-    }
-
-    private var batteryContent: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            IslandHeader(
-                symbol: "battery.100",
-                title: "Battery",
-                subtitle: model.batteryState,
-                trailing: model.batteryPercentage.map { "\($0)%" } ?? "—",
-                expanded: model.expandedIsland == .battery,
-                action: { toggleIsland(.battery) }
-            )
-
-            if model.expandedIsland == .battery {
-                VStack(alignment: .leading, spacing: 14) {
-                    Divider()
-                    LabeledContent("Power Source", value: model.powerSource)
-                        .foregroundStyle(.secondary)
-
-                    VStack(alignment: .leading, spacing: 9) {
-                        HStack {
-                            Text("Energy Mode")
-                                .font(.headline)
-                            Spacer()
-                            if model.energyModeChanging {
-                                ProgressView()
-                                    .controlSize(.small)
-                            }
-                        }
-                        EnergyModeRow(
-                            title: "Automatic",
-                            symbol: "battery.100",
-                            selected: selectedEnergyMode == .automatic,
-                            action: energyModeAction(.automatic)
-                        )
-                        EnergyModeRow(
-                            title: "Low Power",
-                            symbol: "battery.25",
-                            selected: selectedEnergyMode == .lowPower,
-                            action: energyModeAction(.lowPower)
-                        )
-                        EnergyModeRow(
-                            title: "High Power",
-                            symbol: "battery.100.bolt",
-                            selected: selectedEnergyMode == .highPower,
-                            action: energyModeAction(.highPower)
-                        )
-
-                        if model.powerModeControlState == .requiresApproval {
-                            ActionRow(
-                                title: "Allow Energy Mode Control…",
-                                symbol: "lock.open"
-                            ) {
-                                model.openEnergyModeApproval?()
-                            }
-                        } else if case .unavailable(let message) = model.powerModeControlState {
-                            Text(message)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 8)
-                        }
-                    }
-
-                    Divider()
-                    ActionRow(title: "Energy Usage in Activity Monitor…", symbol: "gauge.with.dots.needle.67percent") {
-                        model.openActivityMonitor?()
-                    }
-                    ActionRow(title: "Battery Settings…", symbol: "gear") {
-                        model.openBatterySettings?()
-                    }
-                }
-                .padding(.horizontal, 18)
-                .padding(.bottom, 18)
-            }
         }
     }
 
@@ -319,22 +257,6 @@ struct StatusControlCenterView: View {
         model.toggle(island)
     }
 
-    private var selectedEnergyMode: EnergyMode? {
-        if let energyMode = model.energyMode {
-            return energyMode
-        }
-        return model.lowPowerModeEnabled.map { $0 ? .lowPower : .automatic }
-    }
-
-    private func energyModeAction(_ mode: EnergyMode) -> (() -> Void)? {
-        guard model.energyModeCapabilitiesKnown,
-              model.supportsLowPowerMode,
-              !model.energyModeChanging,
-              mode != .highPower || model.supportsHighPowerMode else {
-            return nil
-        }
-        return { model.selectEnergyMode?(mode) }
-    }
 }
 
 private struct FirstMouseButton: NSViewRepresentable {
@@ -396,6 +318,7 @@ private struct CompactIslandHeader: View {
     let subtitle: String
     var trailing: String? = nil
     var badge: String? = nil
+    var showsDisclosure = true
 
     var body: some View {
         HStack(spacing: 12) {
@@ -429,9 +352,11 @@ private struct CompactIslandHeader: View {
                     .foregroundStyle(.secondary)
             }
 
-            Image(systemName: "chevron.down")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.tertiary)
+            if showsDisclosure {
+                Image(systemName: "chevron.down")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
         }
     }
 }
@@ -568,60 +493,6 @@ private struct NetworkSection: View {
                 }
             }
         }
-    }
-}
-
-private struct EnergyModeRow: View {
-    let title: String
-    let symbol: String
-    let selected: Bool
-    let action: (() -> Void)?
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var isHovered = false
-
-    var body: some View {
-        Button {
-            action?()
-        } label: {
-            HStack(spacing: 11) {
-                ZStack {
-                    Circle().fill(selected ? Color.accentColor : Color.white)
-                    Image(systemName: symbol)
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(selected ? .white : .secondary)
-                }
-                .frame(width: 34, height: 34)
-                Text(title)
-                    .foregroundStyle(selected ? .primary : .secondary)
-                Spacer()
-            }
-            .contentShape(Rectangle())
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-        }
-        .buttonStyle(.plain)
-        .disabled(action == nil)
-        .background(
-            isHovered ? Color.primary.opacity(0.085) : .clear,
-            in: RoundedRectangle(cornerRadius: 10)
-        )
-        .overlay {
-            if isHovered {
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(.white.opacity(0.12), lineWidth: 0.7)
-            }
-        }
-        .onHover { hovered in
-            guard action != nil else {
-                isHovered = false
-                return
-            }
-            withAnimation(reduceMotion ? nil : StatusMotion.hover) {
-                isHovered = hovered
-            }
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityValue(selected ? "Selected" : "Not selected")
     }
 }
 

@@ -27,16 +27,6 @@
 		A10000000000000000000018 /* StatusControlCenterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000019 /* StatusControlCenterView.swift */; };
 		A10000000000000000000019 /* StatusPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000020 /* StatusPanelController.swift */; };
 		A10000000000000000000020 /* StatusMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000021 /* StatusMotion.swift */; };
-		B10000000000000000000001 /* PowerModeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000001 /* PowerModeController.swift */; };
-		B10000000000000000000002 /* PowerModeProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000002 /* PowerModeProtocol.swift */; };
-		B10000000000000000000003 /* CodeSigningRequirement.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000003 /* CodeSigningRequirement.swift */; };
-		B10000000000000000000004 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000004 /* main.swift */; };
-		B10000000000000000000005 /* PowerModeProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000002 /* PowerModeProtocol.swift */; };
-		B10000000000000000000006 /* CodeSigningRequirement.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000003 /* CodeSigningRequirement.swift */; };
-		B10000000000000000000007 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B20000000000000000000007 /* Security.framework */; };
-		B10000000000000000000008 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B20000000000000000000007 /* Security.framework */; };
-		B10000000000000000000009 /* StatusArcPowerHelper in Embed Helper Tools */ = {isa = PBXBuildFile; fileRef = B20000000000000000000006 /* StatusArcPowerHelper */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		B10000000000000000000011 /* io.github.dennich.StatusArc.PowerHelper3.plist in Copy Launch Daemon Plists */ = {isa = PBXBuildFile; fileRef = B20000000000000000000008 /* io.github.dennich.StatusArc.PowerHelper3.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -61,49 +51,7 @@
 		A20000000000000000000019 /* StatusControlCenterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusControlCenterView.swift; sourceTree = "<group>"; };
 		A20000000000000000000020 /* StatusPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusPanelController.swift; sourceTree = "<group>"; };
 		A20000000000000000000021 /* StatusMotion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusMotion.swift; sourceTree = "<group>"; };
-		B20000000000000000000001 /* PowerModeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PowerModeController.swift; sourceTree = "<group>"; };
-		B20000000000000000000002 /* PowerModeProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PowerModeProtocol.swift; sourceTree = "<group>"; };
-		B20000000000000000000003 /* CodeSigningRequirement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeSigningRequirement.swift; sourceTree = "<group>"; };
-		B20000000000000000000004 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
-		B20000000000000000000006 /* StatusArcPowerHelper */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = StatusArcPowerHelper; sourceTree = BUILT_PRODUCTS_DIR; };
-		B20000000000000000000007 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
-		B20000000000000000000008 /* io.github.dennich.StatusArc.PowerHelper3.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = io.github.dennich.StatusArc.PowerHelper3.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
-
-/* Begin PBXContainerItemProxy section */
-		B90000000000000000000001 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = A70000000000000000000001 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = B50000000000000000000001;
-			remoteInfo = StatusArcPowerHelper;
-		};
-/* End PBXContainerItemProxy section */
-
-/* Begin PBXCopyFilesBuildPhase section */
-		B30000000000000000000003 /* Embed Helper Tools */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 6;
-			files = (
-				B10000000000000000000009 /* StatusArcPowerHelper in Embed Helper Tools */,
-			);
-			name = "Embed Helper Tools";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		B30000000000000000000004 /* Copy Launch Daemon Plists */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = Contents/Library/LaunchDaemons;
-			dstSubfolderSpec = 1;
-			files = (
-				B10000000000000000000011 /* io.github.dennich.StatusArc.PowerHelper3.plist in Copy Launch Daemon Plists */,
-			);
-			name = "Copy Launch Daemon Plists";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		A30000000000000000000001 /* Frameworks */ = {
@@ -118,15 +66,6 @@
 				A10000000000000000000011 /* CoreLocation.framework in Frameworks */,
 				A10000000000000000000013 /* Sparkle in Frameworks */,
 				A10000000000000000000016 /* Network.framework in Frameworks */,
-				B10000000000000000000007 /* Security.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		B30000000000000000000001 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				B10000000000000000000008 /* Security.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -137,8 +76,6 @@
 			isa = PBXGroup;
 			children = (
 				A40000000000000000000002 /* StatusArc */,
-				B40000000000000000000001 /* Shared */,
-				B40000000000000000000002 /* PowerModeHelper */,
 				A40000000000000000000003 /* Frameworks */,
 				A40000000000000000000004 /* Products */,
 			);
@@ -153,7 +90,6 @@
 				A20000000000000000000019 /* StatusControlCenterView.swift */,
 				A20000000000000000000020 /* StatusPanelController.swift */,
 				A20000000000000000000021 /* StatusMotion.swift */,
-				B20000000000000000000001 /* PowerModeController.swift */,
 				A20000000000000000000014 /* UpdateManager.swift */,
 				A20000000000000000000003 /* SystemStatusMonitor.swift */,
 				A20000000000000000000015 /* InputSourceIdentity.swift */,
@@ -175,7 +111,6 @@
 				A20000000000000000000011 /* SystemConfiguration.framework */,
 				A20000000000000000000013 /* CoreLocation.framework */,
 				A20000000000000000000017 /* Network.framework */,
-				B20000000000000000000007 /* Security.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -184,27 +119,8 @@
 			isa = PBXGroup;
 			children = (
 				A20000000000000000000010 /* StatusArc.app */,
-				B20000000000000000000006 /* StatusArcPowerHelper */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		B40000000000000000000001 /* Shared */ = {
-			isa = PBXGroup;
-			children = (
-				B20000000000000000000002 /* PowerModeProtocol.swift */,
-				B20000000000000000000003 /* CodeSigningRequirement.swift */,
-			);
-			path = Shared;
-			sourceTree = "<group>";
-		};
-		B40000000000000000000002 /* PowerModeHelper */ = {
-			isa = PBXGroup;
-			children = (
-				B20000000000000000000004 /* main.swift */,
-				B20000000000000000000008 /* io.github.dennich.StatusArc.PowerHelper3.plist */,
-			);
-			path = PowerModeHelper;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -217,13 +133,10 @@
 				A30000000000000000000002 /* Sources */,
 				A30000000000000000000001 /* Frameworks */,
 				A30000000000000000000003 /* Resources */,
-				B30000000000000000000003 /* Embed Helper Tools */,
-				B30000000000000000000004 /* Copy Launch Daemon Plists */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				B90000000000000000000002 /* PBXTargetDependency */,
 			);
 			packageProductDependencies = (
 				A90000000000000000000002 /* Sparkle */,
@@ -232,22 +145,6 @@
 			productName = StatusArc;
 			productReference = A20000000000000000000010 /* StatusArc.app */;
 			productType = "com.apple.product-type.application";
-		};
-		B50000000000000000000001 /* StatusArcPowerHelper */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = B60000000000000000000001 /* Build configuration list for PBXNativeTarget "StatusArcPowerHelper" */;
-			buildPhases = (
-				B30000000000000000000002 /* Sources */,
-				B30000000000000000000001 /* Frameworks */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = StatusArcPowerHelper;
-			productName = StatusArcPowerHelper;
-			productReference = B20000000000000000000006 /* StatusArcPowerHelper */;
-			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
 
@@ -261,9 +158,6 @@
 				TargetAttributes = {
 					A50000000000000000000001 = {
 						CreatedOnToolsVersion = 16.0;
-					};
-					B50000000000000000000001 = {
-						CreatedOnToolsVersion = 27.0;
 					};
 				};
 			};
@@ -284,7 +178,6 @@
 			projectRoot = "";
 			targets = (
 				A50000000000000000000001 /* StatusArc */,
-				B50000000000000000000001 /* StatusArcPowerHelper */,
 			);
 		};
 /* End PBXProject section */
@@ -316,31 +209,10 @@
 				A10000000000000000000018 /* StatusControlCenterView.swift in Sources */,
 				A10000000000000000000019 /* StatusPanelController.swift in Sources */,
 				A10000000000000000000020 /* StatusMotion.swift in Sources */,
-				B10000000000000000000001 /* PowerModeController.swift in Sources */,
-				B10000000000000000000002 /* PowerModeProtocol.swift in Sources */,
-				B10000000000000000000003 /* CodeSigningRequirement.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		B30000000000000000000002 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				B10000000000000000000004 /* main.swift in Sources */,
-				B10000000000000000000005 /* PowerModeProtocol.swift in Sources */,
-				B10000000000000000000006 /* CodeSigningRequirement.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		B90000000000000000000002 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = B50000000000000000000001 /* StatusArcPowerHelper */;
-			targetProxy = B90000000000000000000001 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin XCRemoteSwiftPackageReference section */
 		A90000000000000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
@@ -449,7 +321,6 @@
 			buildSettings = {
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_STYLE = Automatic;
-				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 4;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = NO;
@@ -473,7 +344,6 @@
 			buildSettings = {
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_STYLE = Automatic;
-				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 4;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = NO;
@@ -488,40 +358,6 @@
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.dennich.StatusArc;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-			};
-			name = Release;
-		};
-		B80000000000000000000001 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
-				CURRENT_PROJECT_VERSION = 4;
-				ENABLE_APP_SANDBOX = NO;
-				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.2.0;
-				PRODUCT_BUNDLE_IDENTIFIER = io.github.dennich.StatusArc.PowerHelper3;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				SWIFT_VERSION = 5.0;
-			};
-			name = Debug;
-		};
-		B80000000000000000000002 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
-				CURRENT_PROJECT_VERSION = 4;
-				ENABLE_APP_SANDBOX = NO;
-				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.2.0;
-				PRODUCT_BUNDLE_IDENTIFIER = io.github.dennich.StatusArc.PowerHelper3;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
@@ -543,15 +379,6 @@
 			buildConfigurations = (
 				A80000000000000000000003 /* Debug */,
 				A80000000000000000000004 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		B60000000000000000000001 /* Build configuration list for PBXNativeTarget "StatusArcPowerHelper" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				B80000000000000000000001 /* Debug */,
-				B80000000000000000000002 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

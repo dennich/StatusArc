@@ -29,8 +29,9 @@ control behavior, keyboard navigation, accessibility, and enabled states.
 - Confirm the arc roughly matches the current percentage.
 - Confirm the full track spans 240 degrees and leaves a centered bottom gap.
 - Confirm the unused arc is dimmed.
-- Confirm the Battery island reports percentage, charging/fully charged state,
-  power source, and time remaining.
+- Confirm the Battery island reports percentage and charging/fully charged
+  state without a disclosure chevron.
+- Confirm clicking the Battery island does not expand it or open a submenu.
 - Inject synthetic snapshots in a development harness to validate the following matrix without changing system power settings:
 
 | Percentage | Low Power Mode | macOS warning | Charging | Expected arc / accessory |
@@ -126,21 +127,15 @@ panel label rather than claiming active charging.
 
 - Confirm the collapsed panel shows exactly three islands: Battery,
   Connectivity, and Input Source.
-- Open each island and then switch directly between them. Confirm the prior
-  island contracts while the next expands without pointer-tracking delay.
+- Open Connectivity and Input Source, then switch directly between them.
+  Confirm the prior island contracts while the next expands without
+  pointer-tracking delay. Battery must remain non-expandable.
 - Compare content, controls, and enabled states with the corresponding macOS
   component panels.
 - Confirm Connectivity contains a working system toggle, nearby and known
   networks, and Network and Wi-Fi Settings destinations.
-- Confirm Battery shows its percentage, power state, power source, and the
-  current Energy Mode state. On first change, approve StatusArc under Login
-  Items when macOS asks. Confirm later changes do not request a password, the
-  island remains open, and the selected row changes only after macOS confirms
-  the new mode.
-- Confirm a helper failure stops the progress indicator and reports an error
-  instead of loading indefinitely.
-- Confirm all three Energy Mode rows show circular battery symbols and the
-  current mode uses the accented state. Unsupported modes remain disabled.
+- Confirm Battery shows its percentage and power state without Energy Mode
+  controls, administrator prompts, or registering a new Login Items entry.
 - On macOS 26 or later, confirm the islands use Liquid Glass and matched
   expansion transitions. On macOS 13–25, confirm they use semantic material
   with readable text and smooth state changes.
@@ -149,14 +144,13 @@ panel label rather than claiming active charging.
   follow one continuous ease-out curve without window-edge jitter or clipping.
 - Confirm clicking outside the panel, pressing Escape, or clicking the status
   item again dismisses it.
-- Confirm Battery Settings, Network Settings, Keyboard Settings, Emoji &
-  Symbols, and Wireless Diagnostics invoke the available public system actions.
+- Confirm Network Settings, Keyboard Settings, Emoji & Symbols, and Wireless
+  Diagnostics invoke the available public system actions.
 - Confirm the panel uses only public SwiftUI/AppKit materials and controls.
 
 ## Settings shortcuts
 
-Verify Battery Settings, Network Settings, and Keyboard Settings open without
-crashing StatusArc.
+Verify Network Settings and Keyboard Settings open without crashing StatusArc.
 
 ## Regression checks
 
