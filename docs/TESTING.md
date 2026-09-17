@@ -140,9 +140,10 @@ panel label rather than claiming active charging.
   does not react on hover. Connectivity and Input Source should show subtle
   hover feedback because they expand.
 - In expanded islands, confirm collapsible headers, selectable networks and
-  input sources, and available action rows highlight on hover. Current or
-  unavailable rows must remain visually still and use dimmed icon backings
-  where present.
+  input sources, and available action rows highlight on hover. Current rows
+  must remain visually still and use an accent-colored icon or badge on a
+  white backing; unselected icons and badges use dimmed backings. Unavailable
+  rows must remain visually still and use dimmed icon backings where present.
 - On macOS 26 or later, confirm the islands use Liquid Glass and matched
   expansion transitions. On macOS 13–25, confirm they use semantic material
   with readable text and smooth state changes.

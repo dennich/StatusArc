@@ -478,11 +478,11 @@ private struct InputSourceSelectionRow: View {
             HStack(spacing: 11) {
                 Text(source.label)
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(source.isCurrent ? Color.secondary : Color.primary)
+                    .foregroundStyle(source.isCurrent ? Color.accentColor : Color.primary)
                     .frame(width: 28, height: 22)
                     .background {
                         RoundedRectangle(cornerRadius: 5).fill(
-                            source.isCurrent ? Color.primary.opacity(0.08) : Color.white
+                            source.isCurrent ? Color.white : Color.primary.opacity(0.08)
                         )
                     }
                 Text(source.name)
@@ -622,7 +622,10 @@ private struct NetworkRow: View {
                 Image(systemName: wifiSymbol)
                     .font(.system(size: 16, weight: .semibold))
                     .frame(width: 30, height: 30)
-                    .background(.white, in: Circle())
+                    .background(
+                        network.isCurrent ? Color.white : Color.primary.opacity(0.08),
+                        in: Circle()
+                    )
                     .foregroundStyle(network.isCurrent ? Color.accentColor : Color.primary)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(network.name)
