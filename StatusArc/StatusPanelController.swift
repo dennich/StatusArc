@@ -82,11 +82,13 @@ final class StatusPanelController: NSObject {
     }
 
     func requestClose() {
+#if compiler(>=6.4)
         if #available(macOS 27.0, *), let session = statusItem.expandedInterfaceSession {
             session.cancel()
-        } else {
-            hide(animated: true)
+            return
         }
+#endif
+        hide(animated: true)
     }
 
     private func toggleIsland(_ island: StatusIsland) {
@@ -203,6 +205,7 @@ final class StatusPanelController: NSObject {
     }
 }
 
+#if compiler(>=6.4)
 @available(macOS 27.0, *)
 @MainActor
 final class StatusExpandedInterfaceDelegate: NSObject, @preconcurrency NSStatusItemExpandedInterfaceDelegate {
@@ -223,3 +226,4 @@ final class StatusExpandedInterfaceDelegate: NSObject, @preconcurrency NSStatusI
         panelController?.hide(animated: animated)
     }
 }
+#endif

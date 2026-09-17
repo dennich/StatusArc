@@ -69,8 +69,9 @@ actions back through `AppDelegate`.
 ## `StatusPanelController.swift`
 
 Hosts SwiftUI in a transient AppKit panel, anchors it below the status item,
-tracks dynamic height, and handles native expanded-interface, outside-click,
-and Escape dismissal.
+tracks dynamic height, and handles outside-click and Escape dismissal. Builds
+made with the macOS 27 SDK also adopt the native status-item expanded-interface
+session; earlier SDK builds use the existing status-button action path.
 
 ## `LaunchAtLoginController.swift`
 

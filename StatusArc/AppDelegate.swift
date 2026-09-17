@@ -294,11 +294,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         }
         controlCenterModel.quit = { [weak self] in self?.quit() }
 
+#if compiler(>=6.4)
         if #available(macOS 27.0, *) {
             let delegate = StatusExpandedInterfaceDelegate(panelController: controller)
             expandedInterfaceDelegate = delegate
             statusItem.expandedInterfaceDelegate = delegate
-        } else if let button = statusItem.button {
+            return
+        }
+#endif
+        if let button = statusItem.button {
             button.target = self
             button.action = #selector(toggleControlCenter)
             button.sendAction(on: [.leftMouseUp])
