@@ -4,6 +4,8 @@ All notable user-visible changes to StatusArc are documented here.
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-09-17
+
 ### Changed
 - Selected networks and input sources use accent-colored icons on white backing surfaces; unselected, passive, and unavailable icons use dimmed backings. Hover feedback is limited to expandable islands, collapsible headers, selectable rows, and available actions.
 - The compact panel now includes a Launch at Login option backed by macOS Login Items. It registers only the main StatusArc app and does not install a helper. Local command-line builds are ad-hoc signed so the option works without Apple Developer Program membership.
