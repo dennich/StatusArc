@@ -14,9 +14,11 @@ private final class ControlCenterMenuSurface: NSView {
             glass.cornerRadius = 10
             glass.style = .regular
             glass.tintColor = NSColor.controlAccentColor.withAlphaComponent(0.06)
+#if compiler(>=6.4)
             if #available(macOS 27.0, *) {
                 glass.effectIsInteractive = interactive
             }
+#endif
             content.frame = glass.bounds
             content.autoresizingMask = [.width, .height]
             glass.contentView = content
