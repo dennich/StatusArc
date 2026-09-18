@@ -4,6 +4,8 @@ All notable user-visible changes to StatusArc are documented here.
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-09-18
+
 ### Changed
 - The menu-bar power state now stays inside a fixed-width split battery arc: battery power shows the percentage, active charging uses a bolt, and socket power that is not charging uses a plug. A wider top gap keeps the indicator clear of the arc.
 - Battery percentages use 7-point rounded regular type, input-source labels use rounded bold type, and the compact VPN marker uses slightly lowered 6-point rounded regular type with wider letter spacing.
