@@ -168,6 +168,14 @@ final class StatusIconRenderer {
         rect: NSRect,
         color: NSColor
     ) {
+        // A displayed 100% is easier to read as "on socket power" than as a
+        // cramped three-digit number. Give the plug visual priority even if
+        // macOS briefly continues reporting the battery as charging.
+        if battery.displayedPercentage >= 100 {
+            drawSocketPowerIndicator(in: context, rect: rect, color: color)
+            return
+        }
+
         switch battery.powerState {
         case .onBattery:
             let text = String(battery.displayedPercentage)
@@ -192,33 +200,78 @@ final class StatusIconRenderer {
             context.restoreGState()
 
         case .charging:
-            drawTopSymbol(
-                "bolt.fill",
-                pointSize: 13,
-                weight: .bold,
-                maximumSize: NSSize(width: 12, height: 7.5),
-                rotation: -.pi / 2,
-                context: context,
-                in: rect,
-                color: color
-            )
+            drawChargingBolt(in: context, rect: rect, color: color)
 
         case .fullyCharged, .connectedNotCharging:
-            let symbolName = NSImage(
-                systemSymbolName: "powerplug.portrait.fill",
-                accessibilityDescription: nil
-            ) == nil ? "powerplug.fill" : "powerplug.portrait.fill"
-            drawTopSymbol(
-                symbolName,
-                pointSize: 13,
-                weight: .semibold,
-                maximumSize: NSSize(width: 11.5, height: 7.5),
-                rotation: -.pi / 2,
-                context: context,
-                in: rect,
-                color: color
-            )
+            drawSocketPowerIndicator(in: context, rect: rect, color: color)
         }
+    }
+
+    private func drawChargingBolt(
+        in context: CGContext,
+        rect: NSRect,
+        color: NSColor
+    ) {
+        // This compact horizontal silhouette deliberately uses a custom path.
+        // Rotating bolt.fill produces a thin zig-zag that does not match the
+        // approved broad charging mark.
+        let center = CGPoint(x: rect.midX, y: 18.35)
+        let path = CGMutablePath()
+        path.move(to: CGPoint(x: center.x - 5.9, y: center.y + 0.9))
+        path.addLine(to: CGPoint(x: center.x - 1.6, y: center.y + 0.7))
+        path.addLine(to: CGPoint(x: center.x - 1.5, y: center.y + 3.15))
+        path.addCurve(
+            to: CGPoint(x: center.x, y: center.y + 3.5),
+            control1: CGPoint(x: center.x - 1.45, y: center.y + 3.45),
+            control2: CGPoint(x: center.x - 0.7, y: center.y + 3.65)
+        )
+        path.addLine(to: CGPoint(x: center.x + 5.9, y: center.y))
+        path.addCurve(
+            to: CGPoint(x: center.x + 5.25, y: center.y - 0.65),
+            control1: CGPoint(x: center.x + 6.1, y: center.y - 0.15),
+            control2: CGPoint(x: center.x + 5.75, y: center.y - 0.55)
+        )
+        path.addLine(to: CGPoint(x: center.x + 1.6, y: center.y - 0.4))
+        path.addLine(to: CGPoint(x: center.x + 1.3, y: center.y - 3.05))
+        path.addCurve(
+            to: CGPoint(x: center.x, y: center.y - 3.5),
+            control1: CGPoint(x: center.x + 1.25, y: center.y - 3.35),
+            control2: CGPoint(x: center.x + 0.55, y: center.y - 3.65)
+        )
+        path.addLine(to: CGPoint(x: center.x - 5.9, y: center.y))
+        path.addCurve(
+            to: CGPoint(x: center.x - 5.9, y: center.y + 0.9),
+            control1: CGPoint(x: center.x - 6.15, y: center.y - 0.2),
+            control2: CGPoint(x: center.x - 6.15, y: center.y + 0.7)
+        )
+        path.closeSubpath()
+
+        context.saveGState()
+        context.setFillColor(color.cgColor)
+        context.addPath(path)
+        context.fillPath()
+        context.restoreGState()
+    }
+
+    private func drawSocketPowerIndicator(
+        in context: CGContext,
+        rect: NSRect,
+        color: NSColor
+    ) {
+        let symbolName = NSImage(
+            systemSymbolName: "powerplug.portrait.fill",
+            accessibilityDescription: nil
+        ) == nil ? "powerplug.fill" : "powerplug.portrait.fill"
+        drawTopSymbol(
+            symbolName,
+            pointSize: 13,
+            weight: .semibold,
+            maximumSize: NSSize(width: 11.5, height: 7.5),
+            rotation: -.pi / 2,
+            context: context,
+            in: rect,
+            color: color
+        )
     }
 
     private func drawTopSymbol(

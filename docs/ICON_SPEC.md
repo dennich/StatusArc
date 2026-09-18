@@ -8,14 +8,14 @@ The top arc represents battery percentage while leaving a centered gap for the
 bottom network indicator.
 
 - On battery power, show the rounded battery percentage without a percent sign.
-  Use 7-point rounded regular type with zero letter spacing. A full battery that
-  remains on battery power still shows `100`; external power state, rather than
-  percentage alone, determines whether the plug appears.
-- While actively charging, show an enlarged `bolt.fill` rotated 90 degrees
-  clockwise and centered inside the top gap.
+  Use 7-point rounded regular type with zero letter spacing. Replace `100` with
+  the plug so the top indicator never has to fit three digits.
+- While actively charging below 100%, show the broad custom horizontal bolt
+  centered inside the top gap.
 - When connected to socket power but not charging, including when fully
   charged, show an enlarged filled plug rotated 90 degrees clockwise, with
-  comparable visual weight to the charging bolt.
+  comparable visual weight to the charging bolt. Also show the plug whenever
+  the displayed percentage is 100%, even if macOS reports another power state.
 - Keep a wide top gap around every indicator so rounded arc caps never overlap
   the number or symbol.
 - Across the two 55-degree segments of the split arc, the combined active track

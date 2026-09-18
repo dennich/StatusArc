@@ -5,7 +5,7 @@ All notable user-visible changes to StatusArc are documented here.
 ## [Unreleased]
 
 ### Changed
-- Charging and socket-power indicators are larger and rotated 90 degrees clockwise for clearer recognition in the compact menu-bar frame.
+- Charging uses a broad horizontal bolt, while socket power and every displayed 100% battery use a horizontal plug for clearer recognition in the compact menu-bar frame.
 
 ## [1.3.4] - 2026-09-18
 
