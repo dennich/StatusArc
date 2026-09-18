@@ -7,6 +7,7 @@ All notable user-visible changes to StatusArc are documented here.
 ### Changed
 - The composite menu-bar icon now uses a fixed 22 × 22-point frame.
 - Wi-Fi power is presented as an explicit switch in the expanded connectivity panel.
+- Expandable islands now reveal a system forward disclosure chevron only while hovered.
 
 ### Fixed
 - The menu-bar item remains highlighted while the StatusArc panel is open.

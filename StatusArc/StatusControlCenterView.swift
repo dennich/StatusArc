@@ -105,14 +105,16 @@ struct StatusControlCenterView: View {
             CompactIslandHeader(
                 symbol: "wifi",
                 title: model.networkTitle,
-                subtitle: model.networkDetail
+                subtitle: model.networkDetail,
+                disclosureVisible: hoveredIsland == kind
             )
         case .inputSource:
             CompactIslandHeader(
                 symbol: "keyboard",
                 title: "Input Source",
                 subtitle: model.inputSourceName,
-                badge: model.inputSourceLabel
+                badge: model.inputSourceLabel,
+                disclosureVisible: hoveredIsland == kind
             )
         }
     }
@@ -420,6 +422,7 @@ private struct CompactIslandHeader: View {
     var trailing: String? = nil
     var badge: String? = nil
     var showsDisclosure = true
+    var disclosureVisible = true
     var emphasizesIcon = true
 
     var body: some View {
@@ -459,9 +462,11 @@ private struct CompactIslandHeader: View {
             }
 
             if showsDisclosure {
-                Image(systemName: "chevron.down")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
+                Image(systemName: "chevron.forward")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .opacity(disclosureVisible ? 1 : 0)
+                    .accessibilityHidden(true)
             }
         }
     }
