@@ -18,10 +18,6 @@ final class StatusIconRenderer {
         }
     }
 
-    private static func vpnAccessoryExtent(for vpn: VPNStatus?) -> CGFloat {
-        vpn == nil ? 0 : 10
-    }
-
     static func accessoryState(for battery: BatteryStatus?) -> AccessoryState {
         guard let battery else { return .none }
         switch battery.powerState {
@@ -43,8 +39,6 @@ final class StatusIconRenderer {
         let accessory = batteryAccessory(snapshot.battery, foreground: bright)
         let previousSnapshot = previousSnapshot ?? snapshot
         let previousAccessory = batteryAccessory(previousSnapshot.battery, foreground: bright)
-        let currentVPNAccessory = vpnAccessory(snapshot.vpn, foreground: bright)
-        let previousVPNAccessory = vpnAccessory(previousSnapshot.vpn, foreground: bright)
         let progress = min(max(progress, 0), 1)
         let oldWidth = previousAccessory?.size.width ?? 0
         let newWidth = accessory?.size.width ?? 0
@@ -55,12 +49,8 @@ final class StatusIconRenderer {
         let newExtent = Self.accessoryExtent(
             for: Self.accessoryState(for: snapshot.battery)
         )
-        let oldVPNExtent = Self.vpnAccessoryExtent(for: previousSnapshot.vpn)
-        let newVPNExtent = Self.vpnAccessoryExtent(for: snapshot.vpn)
-        let vpnExtent = oldVPNExtent + (newVPNExtent - oldVPNExtent) * progress
         let imageSize = NSSize(
             width: Self.baseItemWidth
-                + vpnExtent
                 + oldExtent
                 + (newExtent - oldExtent) * progress,
             height: Self.imageHeight
@@ -108,40 +98,16 @@ final class StatusIconRenderer {
 
             self.drawNetworkIndicator(
                 snapshot.network,
+                vpn: snapshot.vpn,
                 in: context,
                 rect: compositeRect,
                 bright: bright,
                 dim: dim
             )
 
-            let vpnCenterX = compositeRect.midX + 14
-                + (currentVPNAccessory?.size.width ?? previousVPNAccessory?.size.width ?? 0) / 2
-            func drawVPNAccessory(_ image: NSImage?, opacity: CGFloat) {
-                guard let image, opacity > 0 else { return }
-                image.draw(
-                    in: NSRect(
-                        x: vpnCenterX - image.size.width / 2,
-                        y: (imageSize.height - image.size.height) / 2,
-                        width: image.size.width,
-                        height: image.size.height
-                    ),
-                    from: .zero,
-                    operation: .sourceOver,
-                    fraction: opacity
-                )
-            }
-            if (previousSnapshot.vpn != nil) == (snapshot.vpn != nil) {
-                drawVPNAccessory(currentVPNAccessory, opacity: 1)
-            } else {
-                drawVPNAccessory(previousVPNAccessory, opacity: 1 - progress)
-                drawVPNAccessory(currentVPNAccessory, opacity: progress)
-            }
-
             // Keep the accessory clear of the longer arc without changing the
             // symbol itself or the dynamic status-item widths.
-            let accessoryCenterX = compositeRect.midX + 14
-                + vpnExtent
-                + accessoryWidth / 2
+            let accessoryCenterX = compositeRect.midX + 14 + accessoryWidth / 2
             func drawAccessory(_ image: NSImage?, opacity: CGFloat) {
                 guard let image, opacity > 0 else { return }
                 image.draw(
@@ -284,30 +250,6 @@ final class StatusIconRenderer {
         return symbol
     }
 
-    private func vpnAccessory(_ vpn: VPNStatus?, foreground: NSColor) -> NSImage? {
-        guard vpn != nil else { return nil }
-
-        let configuration = NSImage.SymbolConfiguration(pointSize: 9, weight: .semibold)
-            .applying(.init(paletteColors: [foreground]))
-        guard let symbol = NSImage(
-            systemSymbolName: "shield.fill",
-            accessibilityDescription: "VPN active"
-        )?.withSymbolConfiguration(configuration) else {
-            return nil
-        }
-
-        let maximumSize = NSSize(width: 8, height: 10)
-        let scale = min(
-            maximumSize.width / symbol.size.width,
-            maximumSize.height / symbol.size.height
-        )
-        symbol.size = NSSize(
-            width: symbol.size.width * scale,
-            height: symbol.size.height * scale
-        )
-        return symbol
-    }
-
     private func drawInputSourceLabel(
         _ label: String,
         in context: CGContext,
@@ -341,11 +283,17 @@ final class StatusIconRenderer {
 
     private func drawNetworkIndicator(
         _ network: NetworkStatus,
+        vpn: VPNStatus?,
         in context: CGContext,
         rect: NSRect,
         bright: NSColor,
         dim: NSColor
     ) {
+        if vpn != nil {
+            drawVPNLabel(in: context, rect: rect, color: bright)
+            return
+        }
+
         switch network {
         case .wifi(let strength, _, _):
             drawWiFiDots(
@@ -372,6 +320,30 @@ final class StatusIconRenderer {
                 dim: dim
             )
         }
+    }
+
+    private func drawVPNLabel(
+        in context: CGContext,
+        rect: NSRect,
+        color: NSColor
+    ) {
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 6.25, weight: .bold),
+            .foregroundColor: color
+        ]
+        let line = CTLineCreateWithAttributedString(
+            NSAttributedString(string: "VPN", attributes: attributes)
+        )
+        let glyphBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
+
+        context.saveGState()
+        context.textMatrix = .identity
+        context.textPosition = CGPoint(
+            x: rect.midX - glyphBounds.midX,
+            y: 2.6 - glyphBounds.midY
+        )
+        CTLineDraw(line, context)
+        context.restoreGState()
     }
 
     private func drawWiFiDots(

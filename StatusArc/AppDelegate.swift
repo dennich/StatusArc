@@ -472,14 +472,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     private func updateStatusIcon(_ snapshot: StatusSnapshot) {
         let previous = lastIconSnapshot
         lastIconSnapshot = snapshot
-        let batteryAccessoryChanged = previous.map {
+        let accessoryChanged = previous.map {
             StatusIconRenderer.accessoryState(for: $0.battery)
                 != StatusIconRenderer.accessoryState(for: snapshot.battery)
         } ?? false
-        let vpnAccessoryChanged = previous.map {
-            ($0.vpn != nil) != (snapshot.vpn != nil)
-        } ?? false
-        let accessoryChanged = batteryAccessoryChanged || vpnAccessoryChanged
         let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
 
         if !accessoryChanged, iconAnimation?.isAnimating == true, !reduceMotion {

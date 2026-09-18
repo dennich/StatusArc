@@ -78,12 +78,12 @@ Other active non-Wi-Fi primary interfaces use three dim dots so StatusArc does
 not misidentify VPN, tunnel, or virtual adapters as Ethernet. Their exact
 interface identity remains available in the menu and accessibility text.
 
-When an active VPN service owns the default route, the bottom indicator still
-represents the physical Wi-Fi or Ethernet connection carrying it. A compact
-shield appears immediately to the right of the composite icon, and the VPN
-service name appears in the menu, panel, tooltip, and accessibility value when
-macOS provides one. The shield uses the normal semantic foreground and does not
-replace or recolor the physical network indicator.
+When an active VPN service owns the default route, `VPN` replaces the physical
+Wi-Fi dots or Ethernet line in the bottom zone. The underlying physical
+connection and VPN service name remain available in the menu, panel, tooltip,
+and accessibility value. The 6.25-point bold label uses the normal semantic
+foreground, is optically centered in the bottom gap, and does not change the
+status-item width.
 
 ## Layout intent
 
@@ -93,7 +93,6 @@ network dots and Ethernet line low in the bottom gap. Trim the original
 transparent left inset and unused outer padding:
 
 - No accessory: 24-point image and item width.
-- Active VPN: add 10 points for the shield accessory.
 - Charging bolt: 34-point image and item width. Keep the bolt within its
   original 8 × 12-point bounds.
 - External-power plug: 36-point image and item width. Fit the vertical plug

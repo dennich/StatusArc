@@ -104,10 +104,10 @@ panel label rather than claiming active charging.
 - Confirm the bottom dots switch to a solid line.
 - Disconnect Ethernet and confirm StatusArc returns to the active Wi-Fi state.
 - Make a VPN or tunnel interface primary and confirm StatusArc continues to
-  show the Wi-Fi dots or Ethernet line for the active physical connection
-  carrying it, shows a shield beside the composite icon, and names the VPN in
-  the panel, menu, tooltip, and accessibility value. Confirm disconnecting the
-  VPN removes the shield without changing the physical connection indicator.
+  identify the active physical connection carrying it in expanded text, while
+  `VPN` replaces the dots or line in the compact icon. Confirm the panel, menu,
+  tooltip, and accessibility value name the VPN, and disconnecting it restores
+  the physical Wi-Fi or Ethernet indicator without changing item width.
 
 ## Input sources
 
