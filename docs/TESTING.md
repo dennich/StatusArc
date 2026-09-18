@@ -52,8 +52,9 @@ control behavior, keyboard navigation, accessibility, and enabled states.
 | 80% | off | none | socket, not charging | split normal / plug |
 | 100% | off | none | fully charged | split normal / plug |
 
-Confirm battery percentages use clearly legible rounded heavy type, zero letter
-spacing, and fit at 100% without touching either arc cap.
+Confirm battery percentages use 7-point rounded bold type, zero letter spacing,
+and fit at 100% without touching either arc cap. At 100%, confirm battery power
+shows `100` while connected external power shows the plug.
 External power with charging paused, charging complete, or the battery otherwise
 not charging must show a compact plug and an accurate panel label rather than
 claiming active charging.
@@ -112,7 +113,7 @@ claiming active charging.
 - Repeat with a Network Extension packet tunnel whose primary route is `utun`,
   `ppp`, or `ipsec` but has no legacy VPN service record. Confirm the generic
   `VPN` state appears without exposing the interface name as VPN details.
-- Confirm `VPN` uses small rounded bold type with clearly visible letter spacing
+- Confirm `VPN` uses 7-point rounded bold type with clearly visible letter spacing
   and stays optically centered in the bottom gap.
 
 ## Input sources
@@ -120,7 +121,7 @@ claiming active charging.
 - Configure at least two input sources in macOS.
 - Switch them using StatusArc.
 - Confirm the center label updates to match the current macOS input source.
-- Confirm one- and two-letter labels both use 9.5-point type, have matching
+- Confirm one- and two-letter labels both use 9.5-point rounded bold type, have matching
   optical vertical alignment, and remain readable at normal menu-bar size.
 - Confirm ASCII sources use a compact system-name label and non-ASCII sources
   use the native language name rather than a fixed country-code mapping.

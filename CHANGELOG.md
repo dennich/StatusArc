@@ -6,7 +6,7 @@ All notable user-visible changes to StatusArc are documented here.
 
 ### Changed
 - The menu-bar power state now stays inside a fixed-width split battery arc: battery power shows the percentage, active charging uses a bolt, and socket power that is not charging uses a plug. A wider top gap keeps the indicator clear of the arc.
-- The compact VPN marker now uses smaller rounded type and wider letter spacing.
+- Battery percentages use 7-point rounded bold type, input-source labels use rounded bold type, and the compact VPN marker uses 7-point rounded bold type with wider letter spacing.
 
 ### Fixed
 - VPN status now appears for modern packet-tunnel connections whose routed `utun`, `ppp`, or `ipsec` interface is not exposed as a legacy macOS VPN service.

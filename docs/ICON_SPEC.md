@@ -8,7 +8,9 @@ The top arc represents battery percentage while leaving a centered gap for the
 bottom network indicator.
 
 - On battery power, show the rounded battery percentage without a percent sign.
-  Use zero letter spacing and size the number for real menu-bar legibility.
+  Use 7-point rounded bold type with zero letter spacing. A full battery that
+  remains on battery power still shows `100`; external power state, rather than
+  percentage alone, determines whether the plug appears.
 - While actively charging, show a `bolt.fill` whose visible mark matches the
   2 × 4-point Figma vector.
 - When connected to socket power but not charging, including when fully
@@ -49,8 +51,8 @@ governed by an exactly-two-letters rule.
 The menu, tooltip, and accessibility value use the complete localized system
 source name from `kTISPropertyLocalizedName`. Keep the compact label visually
 centered and readable at normal menu-bar size. Both one- and two-letter labels
-use a 9.5-point font. Center the visible glyph outlines on the composite icon's
-vertical axis so the labels do not shift.
+use 9.5-point rounded bold type. Center the visible glyph outlines on the
+composite icon's vertical axis so the labels do not shift.
 
 ## 3. Network — bottom
 
@@ -85,7 +87,7 @@ When an active VPN service or packet-tunnel interface owns the default route,
 `VPN` replaces the physical Wi-Fi dots or Ethernet line in the bottom zone. The
 underlying physical connection remains available in the menu, panel, tooltip,
 and accessibility value. Include the VPN service name when macOS provides one;
-otherwise show only the generic VPN state. The 5-point rounded bold label uses
+otherwise show only the generic VPN state. The 7-point rounded bold label uses
 0.5-point letter spacing and the normal semantic foreground. It is optically
 centered in the bottom gap and does not change the status-item width.
 

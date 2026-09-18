@@ -171,11 +171,10 @@ final class StatusIconRenderer {
         switch battery.powerState {
         case .onBattery:
             let text = String(battery.displayedPercentage)
-            let fontSize: CGFloat = text.count >= 3 ? 7 : 8
             let line = roundedTextLine(
                 text,
-                size: fontSize,
-                weight: .heavy,
+                size: 7,
+                weight: .bold,
                 color: color,
                 kern: 0
             )
@@ -265,16 +264,11 @@ final class StatusIconRenderer {
         rect: NSRect,
         color: NSColor
     ) {
-        let font = NSFont.systemFont(
-            ofSize: 9.5,
-            weight: .bold
-        )
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: font,
-            .foregroundColor: color
-        ]
-        let line = CTLineCreateWithAttributedString(
-            NSAttributedString(string: label, attributes: attributes)
+        let line = roundedTextLine(
+            label,
+            size: 9.5,
+            weight: .bold,
+            color: color
         )
         let glyphBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
 
@@ -338,7 +332,7 @@ final class StatusIconRenderer {
     ) {
         let line = roundedTextLine(
             "VPN",
-            size: 5,
+            size: 7,
             weight: .bold,
             color: color,
             kern: 0.5
