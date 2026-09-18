@@ -16,7 +16,7 @@ bottom network indicator.
   label.
 - Keep a wide top gap around every indicator so rounded arc caps never overlap
   the number or symbol.
-- Across the two 65-degree segments of the split arc, the combined active track
+- Across the two 60-degree segments of the split arc, the combined active track
   length still equals the exact battery percentage.
 
 - The active track length equals the exact current battery percentage.
