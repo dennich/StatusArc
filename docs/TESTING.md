@@ -52,7 +52,7 @@ control behavior, keyboard navigation, accessibility, and enabled states.
 | 80% | off | none | socket, not charging | split normal / plug |
 | 100% | off | none | fully charged | split normal / plug |
 
-Confirm battery percentages use 7-point rounded bold type, zero letter spacing,
+Confirm battery percentages use 8-point rounded bold type, zero letter spacing,
 and fit at 100% without touching either arc cap. At 100%, confirm battery power
 shows `100` while connected external power shows the plug.
 External power with charging paused, charging complete, or the battery otherwise
@@ -113,7 +113,7 @@ claiming active charging.
 - Repeat with a Network Extension packet tunnel whose primary route is `utun`,
   `ppp`, or `ipsec` but has no legacy VPN service record. Confirm the generic
   `VPN` state appears without exposing the interface name as VPN details.
-- Confirm `VPN` uses 7-point rounded bold type with clearly visible letter spacing
+- Confirm `VPN` uses lowered 6-point rounded bold type with clearly visible letter spacing
   and stays optically centered in the bottom gap.
 
 ## Input sources

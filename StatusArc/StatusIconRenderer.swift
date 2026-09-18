@@ -173,7 +173,7 @@ final class StatusIconRenderer {
             let text = String(battery.displayedPercentage)
             let line = roundedTextLine(
                 text,
-                size: 7,
+                size: 8,
                 weight: .bold,
                 color: color,
                 kern: 0
@@ -332,7 +332,7 @@ final class StatusIconRenderer {
     ) {
         let line = roundedTextLine(
             "VPN",
-            size: 7,
+            size: 6,
             weight: .bold,
             color: color,
             kern: 0.5
@@ -343,7 +343,7 @@ final class StatusIconRenderer {
         context.textMatrix = .identity
         context.textPosition = CGPoint(
             x: rect.midX - glyphBounds.midX,
-            y: 4 - glyphBounds.midY
+            y: 2 - glyphBounds.midY
         )
         CTLineDraw(line, context)
         context.restoreGState()
