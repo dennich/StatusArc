@@ -81,12 +81,13 @@ Other active non-Wi-Fi primary interfaces use three dim dots so StatusArc does
 not misidentify VPN, tunnel, or virtual adapters as Ethernet. Their exact
 interface identity remains available in the menu and accessibility text.
 
-When an active VPN service owns the default route, `VPN` replaces the physical
-Wi-Fi dots or Ethernet line in the bottom zone. The underlying physical
-connection and VPN service name remain available in the menu, panel, tooltip,
-and accessibility value. The 5-point rounded bold label uses 0.5-point letter
-spacing and the normal semantic foreground. It is optically centered in the
-bottom gap and does not change the status-item width.
+When an active VPN service or packet-tunnel interface owns the default route,
+`VPN` replaces the physical Wi-Fi dots or Ethernet line in the bottom zone. The
+underlying physical connection remains available in the menu, panel, tooltip,
+and accessibility value. Include the VPN service name when macOS provides one;
+otherwise show only the generic VPN state. The 5-point rounded bold label uses
+0.5-point letter spacing and the normal semantic foreground. It is optically
+centered in the bottom gap and does not change the status-item width.
 
 ## Layout intent
 

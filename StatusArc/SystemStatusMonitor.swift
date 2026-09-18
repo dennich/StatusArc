@@ -513,8 +513,15 @@ final class SystemStatusMonitor: NSObject, CWEventDelegate {
             break
         }
 
-        let vpn = primaryServiceID.flatMap {
+        let configuredVPN = primaryServiceID.flatMap {
             readVPNStatus(serviceID: $0, from: store)
+        }
+        // Network Extension packet tunnels can own the default route without
+        // exposing a legacy Setup:/Network/Service interface of type "VPN".
+        // The routed tunnel itself is enough to report a generic VPN state;
+        // do not expose its implementation-specific interface name.
+        let vpn = configuredVPN ?? routedInterface.flatMap {
+            isTunnelInterface($0) ? VPNStatus(name: nil) : nil
         }
 
         if let routedInterface,
@@ -611,6 +618,12 @@ final class SystemStatusMonitor: NSObject, CWEventDelegate {
         return interfaceName.hasPrefix("en")
             || interfaceName.hasPrefix("bridge")
             || interfaceName.hasPrefix("bond")
+    }
+
+    private func isTunnelInterface(_ interfaceName: String) -> Bool {
+        interfaceName.hasPrefix("utun")
+            || interfaceName.hasPrefix("ppp")
+            || interfaceName.hasPrefix("ipsec")
     }
 
     private func readInputSource() -> InputSourceIdentity {

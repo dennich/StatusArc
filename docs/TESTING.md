@@ -109,6 +109,9 @@ claiming active charging.
   `VPN` replaces the dots or line in the compact icon. Confirm the panel, menu,
   tooltip, and accessibility value name the VPN, and disconnecting it restores
   the physical Wi-Fi or Ethernet indicator without changing item width.
+- Repeat with a Network Extension packet tunnel whose primary route is `utun`,
+  `ppp`, or `ipsec` but has no legacy VPN service record. Confirm the generic
+  `VPN` state appears without exposing the interface name as VPN details.
 - Confirm `VPN` uses small rounded bold type with clearly visible letter spacing
   and stays optically centered in the bottom gap.
 
