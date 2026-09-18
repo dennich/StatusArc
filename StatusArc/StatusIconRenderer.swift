@@ -204,14 +204,17 @@ final class StatusIconRenderer {
             context.restoreGState()
 
         case .fullyCharged, .connectedNotCharging:
-            let configuration = NSImage.SymbolConfiguration(pointSize: 5.5, weight: .bold)
+            // SF Symbols include generous alignment padding. Use a larger
+            // symbol frame so the visible bolt matches Figma's 2 × 4-point
+            // vector rather than inheriting the tiny padded glyph size.
+            let configuration = NSImage.SymbolConfiguration(pointSize: 9.5, weight: .bold)
                 .applying(.init(paletteColors: [color]))
             guard let bolt = NSImage(
                 systemSymbolName: "bolt.fill",
                 accessibilityDescription: nil
             )?.withSymbolConfiguration(configuration) else { return }
 
-            let maximumSize = NSSize(width: 3.5, height: 5.5)
+            let maximumSize = NSSize(width: 6, height: 9.5)
             let scale = min(
                 maximumSize.width / bolt.size.width,
                 maximumSize.height / bolt.size.height

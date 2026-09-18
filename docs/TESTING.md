@@ -69,6 +69,8 @@ claiming active charging.
   items must not move.
 - Confirm the top number or bolt remains centered inside the split-arc gap and
   does not collide with the arc at 0%, 100%, or increased-contrast widths.
+- Confirm the visible socket-power bolt matches the 2 × 4-point Figma mark; do
+  not judge its size from the larger padded SF Symbol image bounds.
 - Confirm the button never automatically scales or squeezes the artwork.
 - Check transitions with the menu open and after wake; confirm the final icon matches the reported charging/warning state.
 - Confirm this change adds no system-state polling or permission requests.

@@ -11,7 +11,8 @@ bottom network indicator.
 - While charging, split the arc around a small top gap and show the rounded
   battery percentage, without a percent sign, in that gap.
 - When connected to external power but not charging, including when fully
-  charged, split the arc and show a compact `bolt.fill` in the top gap.
+  charged, split the arc and show a `bolt.fill` whose visible mark matches the
+  2 × 4-point Figma vector in the top gap.
 - Across the two 90-degree segments of a split arc, the combined active track
   length still equals the exact battery percentage.
 
