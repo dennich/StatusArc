@@ -113,7 +113,7 @@ claiming active charging.
 - Repeat with a Network Extension packet tunnel whose primary route is `utun`,
   `ppp`, or `ipsec` but has no legacy VPN service record. Confirm the generic
   `VPN` state appears without exposing the interface name as VPN details.
-- Confirm `VPN` uses lowered 6-point rounded regular type with clearly visible letter spacing
+- Confirm `VPN` uses slightly lowered 6-point rounded regular type with clearly visible letter spacing
   and stays optically centered in the bottom gap.
 
 ## Input sources

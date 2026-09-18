@@ -87,7 +87,7 @@ When an active VPN service or packet-tunnel interface owns the default route,
 `VPN` replaces the physical Wi-Fi dots or Ethernet line in the bottom zone. The
 underlying physical connection remains available in the menu, panel, tooltip,
 and accessibility value. Include the VPN service name when macOS provides one;
-otherwise show only the generic VPN state. The lowered 6-point rounded regular label uses
+otherwise show only the generic VPN state. The slightly lowered 6-point rounded regular label uses
 0.5-point letter spacing and the normal semantic foreground. It is optically
 centered in the bottom gap and does not change the status-item width.
 

@@ -343,7 +343,7 @@ final class StatusIconRenderer {
         context.textMatrix = .identity
         context.textPosition = CGPoint(
             x: rect.midX - glyphBounds.midX,
-            y: 2 - glyphBounds.midY
+            y: 3 - glyphBounds.midY
         )
         CTLineDraw(line, context)
         context.restoreGState()
