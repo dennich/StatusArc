@@ -269,22 +269,17 @@ jobs:
 
           python3 - "$VERSION" "$NOTES_FILE" <<'PY'
           from pathlib import Path
-          import re
           import sys
 
           version, destination = sys.argv[1:3]
-          text = Path("CHANGELOG.md").read_text()
-
-          pattern = re.compile(
-              rf"^## \[{re.escape(version)}\][^\n]*\n(?P<body>.*?)(?=^## \[|\Z)",
-              re.MULTILINE | re.DOTALL,
+          notes = (
+              f"StatusArc {version} is a native macOS menu-bar utility that combines "
+              "battery, network, and keyboard input-source status in one compact icon.\n\n"
+              "This update includes the latest interface, system-integration, "
+              "reliability, and accessibility improvements.\n\n"
+              f"[View the full changelog](https://github.com/dennich/StatusArc/blob/v{version}/CHANGELOG.md).\n"
           )
-          match = pattern.search(text)
-
-          if match is None:
-              raise SystemExit(f"CHANGELOG.md has no section for {version}")
-
-          Path(destination).write_text(match.group("body").strip() + "\n")
+          Path(destination).write_text(notes)
           PY
 
           if [[ "$SIGNED" == "true" ]]; then
