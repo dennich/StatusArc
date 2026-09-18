@@ -4,6 +4,8 @@ All notable user-visible changes to StatusArc are documented here.
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-09-18
+
 ### Added
 - Active VPN connections now replace the compact dots or line with a clear `VPN` label and include the VPN service name in connectivity text when macOS provides one.
 
