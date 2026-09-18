@@ -8,7 +8,7 @@ The top arc represents battery percentage while leaving a centered gap for the
 bottom network indicator.
 
 - On battery power, show the rounded battery percentage without a percent sign.
-  Use 8-point rounded bold type with zero letter spacing. A full battery that
+  Use 7-point rounded regular type with zero letter spacing. A full battery that
   remains on battery power still shows `100`; external power state, rather than
   percentage alone, determines whether the plug appears.
 - While actively charging, show a `bolt.fill` whose visible mark matches the
@@ -18,7 +18,7 @@ bottom network indicator.
   label.
 - Keep a wide top gap around every indicator so rounded arc caps never overlap
   the number or symbol.
-- Across the two 50-degree segments of the split arc, the combined active track
+- Across the two 55-degree segments of the split arc, the combined active track
   length still equals the exact battery percentage.
 
 - The active track length equals the exact current battery percentage.
@@ -87,7 +87,7 @@ When an active VPN service or packet-tunnel interface owns the default route,
 `VPN` replaces the physical Wi-Fi dots or Ethernet line in the bottom zone. The
 underlying physical connection remains available in the menu, panel, tooltip,
 and accessibility value. Include the VPN service name when macOS provides one;
-otherwise show only the generic VPN state. The lowered 6-point rounded bold label uses
+otherwise show only the generic VPN state. The lowered 6-point rounded regular label uses
 0.5-point letter spacing and the normal semantic foreground. It is optically
 centered in the bottom gap and does not change the status-item width.
 

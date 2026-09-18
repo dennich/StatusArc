@@ -79,8 +79,8 @@ final class StatusIconRenderer {
         let lineWidth: CGFloat = 1.75
         let startAngle = CGFloat.pi * (10.0 / 9.0)
         let endAngle = -CGFloat.pi / 9.0
-        let leftGapAngle = CGFloat.pi * (5.0 / 6.0)
-        let rightGapAngle = CGFloat.pi / 6.0
+        let leftGapAngle = CGFloat.pi * (29.0 / 36.0)
+        let rightGapAngle = CGFloat.pi * (7.0 / 36.0)
         let hasTopIndicator = battery != nil
 
         let activeColor: NSColor
@@ -134,7 +134,7 @@ final class StatusIconRenderer {
         let fraction = min(max(battery.level, 0.0), 1.0)
         if fraction > 0 {
             if hasTopIndicator {
-                // The two 50-degree segments together represent 100%.
+                // The two 55-degree segments together represent 100%.
                 let segmentSweep = startAngle - leftGapAngle
                 let activeSweep = segmentSweep * 2 * CGFloat(fraction)
                 let leftSweep = min(activeSweep, segmentSweep)
@@ -173,8 +173,8 @@ final class StatusIconRenderer {
             let text = String(battery.displayedPercentage)
             let line = roundedTextLine(
                 text,
-                size: 8,
-                weight: .bold,
+                size: 7,
+                weight: .regular,
                 color: color,
                 kern: 0
             )
@@ -333,7 +333,7 @@ final class StatusIconRenderer {
         let line = roundedTextLine(
             "VPN",
             size: 6,
-            weight: .bold,
+            weight: .regular,
             color: color,
             kern: 0.5
         )
