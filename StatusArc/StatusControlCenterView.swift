@@ -582,8 +582,10 @@ private struct IslandHeader: View {
             if showsToggle, let toggle {
                 Toggle("", isOn: toggle)
                     .labelsHidden()
+                    .toggleStyle(.switch)
                     .disabled(toggleDisabled)
                     .padding(.trailing, inset)
+                    .accessibilityLabel("Wi-Fi")
             }
         }
     }
@@ -674,10 +676,16 @@ private struct ActionRow: View {
 
     var body: some View {
         Button(action: action) {
-            Label(title, systemImage: symbol)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
-                .padding(.vertical, 3)
+            HStack(spacing: 10) {
+                Image(systemName: symbol)
+                    .frame(width: 18)
+                Text(title)
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
         }
         .buttonStyle(.plain)
         .statusHoverHighlight(isHovered && isEnabled)

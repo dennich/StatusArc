@@ -52,6 +52,7 @@ final class StatusPanelController: NSObject {
         panel.alphaValue = animated && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? 0 : 1
         panel.orderFrontRegardless()
         panel.makeKey()
+        statusItem.button?.highlight(true)
 
         if panel.alphaValue == 0 {
             NSAnimationContext.runAnimationGroup { context in
@@ -66,6 +67,7 @@ final class StatusPanelController: NSObject {
         pendingCompactResize?.cancel()
         pendingCompactResize = nil
         model.expandedIsland = nil
+        statusItem.button?.highlight(false)
 
         guard animated && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
             panel.orderOut(nil)

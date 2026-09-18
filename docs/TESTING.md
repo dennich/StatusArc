@@ -66,7 +66,7 @@ claiming active charging.
 - Check 0%, 100%, unavailable battery, and fully charged snapshots.
 - Check both light and dark appearances at normal size and Retina scale.
 - Switch repeatedly among battery, charging, and external-power states. The
-  image and native item must remain 24 × 22 points, and neighboring menu-bar
+  image and native item must remain 22 × 22 points, and neighboring menu-bar
   items must not move.
 - Confirm the top number or bolt remains centered inside the split-arc gap and
   does not collide with the arc at 0%, 100%, or increased-contrast widths.

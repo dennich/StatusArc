@@ -2,8 +2,8 @@ import AppKit
 import CoreText
 
 final class StatusIconRenderer {
-    // Trim only transparent outer margins; the artwork keeps its original geometry.
-    static let baseItemWidth: CGFloat = 24
+    // Keep the native status item square without scaling the artwork.
+    static let baseItemWidth: CGFloat = 22
     private static let imageHeight: CGFloat = 22
 
     func render(snapshot: StatusSnapshot) -> NSImage {
@@ -26,10 +26,10 @@ final class StatusIconRenderer {
             )
             let differentiateWithoutColor = NSWorkspace.shared
                 .accessibilityDisplayShouldDifferentiateWithoutColor
-            // The original arc has 3 points of transparent inset on its left.
-            // Remove that inset without changing its radius.
+            // Preserve the 30-point drawing coordinate space while centering
+            // its 10-point arc inside the final 22-point status-item frame.
             let compositeRect = NSRect(
-                x: -3,
+                x: -4,
                 y: 0, width: 30, height: imageSize.height
             )
 

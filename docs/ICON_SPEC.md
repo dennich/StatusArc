@@ -93,8 +93,8 @@ centered in the bottom gap and does not change the status-item width.
 
 ## Layout intent
 
-Use one fixed 24 × 22-point image and status item. Preserve the 30 × 22-point
+Use one fixed 22 × 22-point image and status item. Preserve the 30 × 22-point
 composite coordinate space with a 10-point arc radius while trimming its
-transparent left inset and unused outer padding. Keep the network dots and
+transparent outer padding. Keep the network dots and
 Ethernet line low in the bottom gap. The status button uses no image scaling,
 and all battery, input-source, and network states keep the same external frame.
