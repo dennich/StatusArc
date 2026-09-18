@@ -185,9 +185,7 @@ final class StatusIconRenderer {
             context.saveGState()
             context.textMatrix = CGAffineTransform(scaleX: horizontalScale, y: 1)
             context.textPosition = CGPoint(
-                // A small optical correction balances the rounded numerals
-                // within the arc gap while retaining their original height.
-                x: rect.midX - glyphBounds.midX * horizontalScale - 0.5,
+                x: rect.midX - glyphBounds.midX * horizontalScale,
                 y: 19 - glyphBounds.midY
             )
             CTLineDraw(line, context)

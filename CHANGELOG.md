@@ -4,6 +4,9 @@ All notable user-visible changes to StatusArc are documented here.
 
 ## [Unreleased]
 
+### Fixed
+- Battery-percentage numerals are horizontally centered after the switch to rounded regular type.
+
 ## [1.3.2] - 2026-09-18
 
 ### Changed
