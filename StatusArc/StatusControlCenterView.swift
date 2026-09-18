@@ -563,10 +563,6 @@ private struct IslandHeader: View {
                         .foregroundStyle(.secondary)
                 }
 
-                Image(systemName: expanded ? "chevron.up" : "chevron.down")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-
                 if showsToggle, toggle != nil {
                     Color.clear.frame(width: 48, height: 1)
                 }
