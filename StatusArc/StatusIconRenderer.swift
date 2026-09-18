@@ -79,9 +79,9 @@ final class StatusIconRenderer {
         let lineWidth: CGFloat = 1.75
         let startAngle = CGFloat.pi * (10.0 / 9.0)
         let endAngle = -CGFloat.pi / 9.0
-        let leftGapAngle = CGFloat.pi * (2.0 / 3.0)
-        let rightGapAngle = CGFloat.pi / 3.0
-        let hasTopIndicator = battery.map { $0.powerState != .onBattery } ?? false
+        let leftGapAngle = CGFloat.pi * (13.0 / 18.0)
+        let rightGapAngle = CGFloat.pi * (5.0 / 18.0)
+        let hasTopIndicator = battery != nil
 
         let activeColor: NSColor
         let remainderColor: NSColor
@@ -120,8 +120,8 @@ final class StatusIconRenderer {
             context.restoreGState()
         }
 
-        // Battery power uses one continuous arc. External-power states reserve
-        // a small top gap for their compact power indicator.
+        // Every available battery state reserves a wide top gap for its power
+        // indicator. The wider opening keeps round arc caps clear of numbers.
         if hasTopIndicator {
             strokeArc(from: startAngle, to: leftGapAngle, color: remainderColor)
             strokeArc(from: rightGapAngle, to: endAngle, color: remainderColor)
@@ -134,7 +134,7 @@ final class StatusIconRenderer {
         let fraction = min(max(battery.level, 0.0), 1.0)
         if fraction > 0 {
             if hasTopIndicator {
-                // The two 80-degree segments together represent 100%.
+                // The two 70-degree segments together represent 100%.
                 let segmentSweep = startAngle - leftGapAngle
                 let activeSweep = segmentSweep * 2 * CGFloat(fraction)
                 let leftSweep = min(activeSweep, segmentSweep)
@@ -170,16 +170,14 @@ final class StatusIconRenderer {
     ) {
         switch battery.powerState {
         case .onBattery:
-            return
-
-        case .charging:
             let text = String(battery.displayedPercentage)
             let fontSize: CGFloat = text.count >= 3 ? 7 : 8
             let line = roundedTextLine(
                 text,
                 size: fontSize,
                 weight: .heavy,
-                color: color
+                color: color,
+                kern: 0
             )
             let glyphBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
             let maximumWidth: CGFloat = 8.5
@@ -194,35 +192,69 @@ final class StatusIconRenderer {
             CTLineDraw(line, context)
             context.restoreGState()
 
-        case .fullyCharged, .connectedNotCharging:
+        case .charging:
             // SF Symbols include generous alignment padding. Use a larger
             // symbol frame so the visible bolt matches Figma's 2 × 4-point
             // vector rather than inheriting the tiny padded glyph size.
-            let configuration = NSImage.SymbolConfiguration(pointSize: 9.5, weight: .bold)
-                .applying(.init(paletteColors: [color]))
-            guard let bolt = NSImage(
-                systemSymbolName: "bolt.fill",
-                accessibilityDescription: nil
-            )?.withSymbolConfiguration(configuration) else { return }
-
-            let maximumSize = NSSize(width: 6, height: 9.5)
-            let scale = min(
-                maximumSize.width / bolt.size.width,
-                maximumSize.height / bolt.size.height
+            drawTopSymbol(
+                "bolt.fill",
+                pointSize: 9.5,
+                weight: .bold,
+                maximumSize: NSSize(width: 6, height: 9.5),
+                in: rect,
+                color: color
             )
-            let size = NSSize(width: bolt.size.width * scale, height: bolt.size.height * scale)
-            bolt.draw(
-                in: NSRect(
-                    x: rect.midX - size.width / 2,
-                    y: 19 - size.height / 2,
-                    width: size.width,
-                    height: size.height
-                ),
-                from: .zero,
-                operation: .sourceOver,
-                fraction: 1
+
+        case .fullyCharged, .connectedNotCharging:
+            let symbolName = NSImage(
+                systemSymbolName: "powerplug.portrait.fill",
+                accessibilityDescription: nil
+            ) == nil ? "powerplug.fill" : "powerplug.portrait.fill"
+            drawTopSymbol(
+                symbolName,
+                pointSize: 9.5,
+                weight: .semibold,
+                maximumSize: NSSize(width: 4.5, height: 6.5),
+                in: rect,
+                color: color
             )
         }
+    }
+
+    private func drawTopSymbol(
+        _ name: String,
+        pointSize: CGFloat,
+        weight: NSFont.Weight,
+        maximumSize: NSSize,
+        in rect: NSRect,
+        color: NSColor
+    ) {
+        let configuration = NSImage.SymbolConfiguration(pointSize: pointSize, weight: weight)
+            .applying(.init(paletteColors: [color]))
+        guard let symbol = NSImage(
+            systemSymbolName: name,
+            accessibilityDescription: nil
+        )?.withSymbolConfiguration(configuration) else { return }
+
+        let scale = min(
+            maximumSize.width / symbol.size.width,
+            maximumSize.height / symbol.size.height
+        )
+        let size = NSSize(
+            width: symbol.size.width * scale,
+            height: symbol.size.height * scale
+        )
+        symbol.draw(
+            in: NSRect(
+                x: rect.midX - size.width / 2,
+                y: 19 - size.height / 2,
+                width: size.width,
+                height: size.height
+            ),
+            from: .zero,
+            operation: .sourceOver,
+            fraction: 1
+        )
     }
 
     private func drawInputSourceLabel(

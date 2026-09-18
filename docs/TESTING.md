@@ -27,8 +27,7 @@ control behavior, keyboard navigation, accessibility, and enabled states.
 ## Battery
 
 - Confirm the arc roughly matches the current percentage.
-- On battery power, confirm the track is one continuous 220-degree arc with no
-  top gap.
+- Confirm the split track leaves a clear top gap around every indicator.
 - Confirm the unused arc is dimmed.
 - Confirm the Battery island reports percentage and charging/fully charged
   state without a disclosure chevron.
@@ -37,25 +36,26 @@ control behavior, keyboard navigation, accessibility, and enabled states.
 
 | Percentage | Low Power Mode | macOS warning | Power state | Expected arc / top indicator |
 | --- | --- | --- | --- | --- |
-| 80% | off | none | battery | continuous normal / none |
-| 26% | off | none | battery | continuous normal / none |
-| 25% | off | none | battery | continuous normal / none |
-| 10% | off | none | battery | continuous normal / none |
-| 80% | on | none | battery | continuous yellow / none |
-| 20% | on | none | battery | continuous yellow / none |
-| 30% | off | early | battery | continuous red / none |
-| 30% | off | final | battery | continuous red / none |
-| 80% | off | none | charging | split normal / `80` |
-| 20% | off | none | charging | split normal / `20` |
-| 80% | on | none | charging | split yellow / `80` |
-| 20% | on | none | charging | split yellow / `20` |
-| 30% | off and on | early and final | charging | split red / `30` |
-| 80% | off | none | external, not charging | split normal / bolt |
-| 100% | off | none | fully charged | split normal / bolt |
+| 80% | off | none | battery | split normal / `80` |
+| 26% | off | none | battery | split normal / `26` |
+| 25% | off | none | battery | split normal / `25` |
+| 10% | off | none | battery | split normal / `10` |
+| 80% | on | none | battery | split yellow / `80` |
+| 20% | on | none | battery | split yellow / `20` |
+| 30% | off | early | battery | split red / `30` |
+| 30% | off | final | battery | split red / `30` |
+| 80% | off | none | charging | split normal / bolt |
+| 20% | off | none | charging | split normal / bolt |
+| 80% | on | none | charging | split yellow / bolt |
+| 20% | on | none | charging | split yellow / bolt |
+| 30% | off and on | early and final | charging | split red / bolt |
+| 80% | off | none | socket, not charging | split normal / plug |
+| 100% | off | none | fully charged | split normal / plug |
 
-Confirm charging percentages use clearly legible rounded heavy type and fit at 100%.
+Confirm battery percentages use clearly legible rounded heavy type, zero letter
+spacing, and fit at 100% without touching either arc cap.
 External power with charging paused, charging complete, or the battery otherwise
-not charging must show a compact bolt and an accurate panel label rather than
+not charging must show a compact plug and an accurate panel label rather than
 claiming active charging.
 
 - Check that percentage alone never triggers a warning: 25.49% displays 25%, 25.50% displays 26%, and neither is urgent without a system warning. Also check 0% and 10% with no warning.
@@ -69,7 +69,7 @@ claiming active charging.
   items must not move.
 - Confirm the top number or bolt remains centered inside the split-arc gap and
   does not collide with the arc at 0%, 100%, or increased-contrast widths.
-- Confirm the visible socket-power bolt matches the 2 × 4-point Figma mark; do
+- Confirm the visible charging bolt matches the 2 × 4-point Figma mark; do
   not judge its size from the larger padded SF Symbol image bounds.
 - Confirm the button never automatically scales or squeezes the artwork.
 - Check transitions with the menu open and after wake; confirm the final icon matches the reported charging/warning state.
