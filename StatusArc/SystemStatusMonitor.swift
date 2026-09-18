@@ -101,9 +101,18 @@ enum NetworkStatus {
     }
 }
 
+struct VPNStatus: Equatable {
+    let name: String?
+
+    var description: String {
+        name.map { "VPN: \($0)" } ?? "VPN"
+    }
+}
+
 struct StatusSnapshot {
     let battery: BatteryStatus?
     let network: NetworkStatus
+    let vpn: VPNStatus?
     let inputSourceLabel: String
     let inputSourceName: String
 
@@ -126,11 +135,17 @@ struct StatusSnapshot {
             batteryText = "Battery unavailable"
         }
 
-        return "\(batteryText) • \(network.description) • \(inputSourceName)"
+        let vpnText = vpn.map { " • \($0.description)" } ?? ""
+        return "\(batteryText) • \(network.description)\(vpnText) • \(inputSourceName)"
     }
 }
 
 final class SystemStatusMonitor: NSObject, CWEventDelegate {
+    private struct NetworkRoute {
+        let displayInterfaceName: String?
+        let vpn: VPNStatus?
+    }
+
     private let wifiClient = CWWiFiClient.shared()
     private let pathMonitor = NWPathMonitor()
     private let pathMonitorQueue = DispatchQueue(label: "StatusArc.NetworkPath")
@@ -329,9 +344,11 @@ final class SystemStatusMonitor: NSObject, CWEventDelegate {
 
     func snapshot() -> StatusSnapshot {
         let inputSource = readInputSource()
+        let networkState = readNetworkState()
         return StatusSnapshot(
             battery: readBattery(),
-            network: readNetworkStatus(),
+            network: networkState.status,
+            vpn: networkState.vpn,
             inputSourceLabel: inputSource.compactLabel,
             inputSourceName: inputSource.localizedName
         )
@@ -392,24 +409,28 @@ final class SystemStatusMonitor: NSObject, CWEventDelegate {
         return nil
     }
 
-    private func readNetworkStatus() -> NetworkStatus {
+    private func readNetworkState() -> (status: NetworkStatus, vpn: VPNStatus?) {
         let connectivity: NetworkConnectivity = networkPathStatus == .satisfied
             ? .internet
             : .localOnly
         let wifiInterfaces = wifiClient.interfaces() ?? []
         let wifiNames = Set(wifiInterfaces.compactMap(\.interfaceName))
         let defaultWiFi = wifiClient.interface()
+        let route = readNetworkRoute(wifiNames: wifiNames)
 
-        guard let primaryInterface = readPrimaryInterfaceName(wifiNames: wifiNames) else {
-            guard let defaultWiFi else { return .disconnected }
+        guard let primaryInterface = route.displayInterfaceName else {
+            guard let defaultWiFi else { return (.disconnected, route.vpn) }
             if defaultWiFi.powerOn(), defaultWiFi.rssiValue() < 0 {
-                return .wifi(
+                return (.wifi(
                     strength: strength(for: defaultWiFi.rssiValue()),
                     rssi: defaultWiFi.rssiValue(),
                     connectivity: .localOnly
-                )
+                ), route.vpn)
             }
-            return defaultWiFi.powerOn() ? .wifiDisconnected : .wifiOff
+            return (
+                defaultWiFi.powerOn() ? .wifiDisconnected : .wifiOff,
+                route.vpn
+            )
         }
 
         if wifiNames.contains(primaryInterface),
@@ -418,40 +439,40 @@ final class SystemStatusMonitor: NSObject, CWEventDelegate {
            }) {
 
             guard wifiInterface.powerOn() else {
-                return .wifiOff
+                return (.wifiOff, route.vpn)
             }
 
             let rssi = wifiInterface.rssiValue()
 
             // CoreWLAN normally returns a negative RSSI while associated.
             guard rssi < 0 else {
-                return .wifi(
+                return (.wifi(
                     strength: 0,
                     rssi: nil,
                     connectivity: connectivity
-                )
+                ), route.vpn)
             }
 
-            return .wifi(
+            return (.wifi(
                 strength: strength(for: rssi),
                 rssi: rssi,
                 connectivity: connectivity
-            )
+            ), route.vpn)
         }
 
         if isEthernetLike(primaryInterface, wifiNames: wifiNames) {
-            return .ethernet(
+            return (.ethernet(
                 interfaceName: primaryInterface,
                 connectivity: connectivity
-            )
+            ), route.vpn)
         }
 
         // Covers interfaces such as VPN/tunnel adapters. The renderer uses a
         // neutral disconnected-style indicator instead of claiming Ethernet.
-        return .other(
+        return (.other(
             interfaceName: primaryInterface,
             connectivity: connectivity
-        )
+        ), route.vpn)
     }
 
     private func strength(for rssi: Int) -> Int {
@@ -460,14 +481,14 @@ final class SystemStatusMonitor: NSObject, CWEventDelegate {
         return 1
     }
 
-    private func readPrimaryInterfaceName(wifiNames: Set<String>) -> String? {
+    private func readNetworkRoute(wifiNames: Set<String>) -> NetworkRoute {
         guard let store = SCDynamicStoreCreate(
             nil,
             "StatusArc" as CFString,
             nil,
             nil
         ) else {
-            return nil
+            return NetworkRoute(displayInterfaceName: nil, vpn: nil)
         }
 
         let globalNetworkKeys = [
@@ -476,6 +497,7 @@ final class SystemStatusMonitor: NSObject, CWEventDelegate {
         ]
 
         var routedInterface: String?
+        var primaryServiceID: String?
         for key in globalNetworkKeys {
             guard
                 let value = SCDynamicStoreCopyValue(store, key as CFString)
@@ -487,20 +509,50 @@ final class SystemStatusMonitor: NSObject, CWEventDelegate {
             }
 
             routedInterface = interfaceName
+            primaryServiceID = value["PrimaryService"] as? String
             break
+        }
+
+        let vpn = primaryServiceID.flatMap {
+            readVPNStatus(serviceID: $0, from: store)
         }
 
         if let routedInterface,
            wifiNames.contains(routedInterface)
             || isEthernetLike(routedInterface, wifiNames: wifiNames) {
-            return routedInterface
+            return NetworkRoute(displayInterfaceName: routedInterface, vpn: vpn)
         }
 
         // A VPN or tunnel can own the default route even though Wi-Fi or
         // Ethernet remains the physical link carrying it. Use macOS's service
         // order to select the first active physical interface in that case.
-        return readActivePhysicalInterfaceName(from: store, wifiNames: wifiNames)
-            ?? routedInterface
+        let displayInterface = readActivePhysicalInterfaceName(
+            from: store,
+            wifiNames: wifiNames
+        ) ?? routedInterface
+        return NetworkRoute(displayInterfaceName: displayInterface, vpn: vpn)
+    }
+
+    private func readVPNStatus(
+        serviceID: String,
+        from store: SCDynamicStore
+    ) -> VPNStatus? {
+        let interfaceKey = "Setup:/Network/Service/\(serviceID)/Interface"
+        guard
+            let interface = SCDynamicStoreCopyValue(store, interfaceKey as CFString)
+                as? [String: Any],
+            interface["Type"] as? String == "VPN"
+        else {
+            return nil
+        }
+
+        let serviceKey = "Setup:/Network/Service/\(serviceID)"
+        let service = SCDynamicStoreCopyValue(store, serviceKey as CFString)
+            as? [String: Any]
+        let name = (service?["UserDefinedName"] as? String).flatMap {
+            $0.isEmpty ? nil : $0
+        }
+        return VPNStatus(name: name)
     }
 
     private func readActivePhysicalInterfaceName(

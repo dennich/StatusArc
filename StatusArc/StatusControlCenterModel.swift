@@ -111,6 +111,9 @@ final class StatusControlCenterModel: ObservableObject {
 
         networkTitle = Self.networkTitle(for: snapshot.network)
         networkDetail = currentSSID ?? snapshot.network.description
+        if let vpn = snapshot.vpn {
+            networkDetail += " • \(vpn.description)"
+        }
         self.wifiOn = wifiOn
         self.wifiBusy = wifiBusy
         self.currentSSID = currentSSID

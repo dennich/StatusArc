@@ -472,10 +472,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     private func updateStatusIcon(_ snapshot: StatusSnapshot) {
         let previous = lastIconSnapshot
         lastIconSnapshot = snapshot
-        let accessoryChanged = previous.map {
+        let batteryAccessoryChanged = previous.map {
             StatusIconRenderer.accessoryState(for: $0.battery)
                 != StatusIconRenderer.accessoryState(for: snapshot.battery)
         } ?? false
+        let vpnAccessoryChanged = previous.map {
+            ($0.vpn != nil) != (snapshot.vpn != nil)
+        } ?? false
+        let accessoryChanged = batteryAccessoryChanged || vpnAccessoryChanged
         let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
 
         if !accessoryChanged, iconAnimation?.isAnimating == true, !reduceMotion {
@@ -562,6 +566,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
             } ?? "Network: Disconnecting…"
         case .changingPower, .idle:
             break
+        }
+
+        if let vpn = snapshot.vpn {
+            networkItem.title += " • \(vpn.description)"
         }
 
         connectivityMenuItem.title = networkItem.title.replacingOccurrences(

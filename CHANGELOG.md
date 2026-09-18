@@ -4,6 +4,9 @@ All notable user-visible changes to StatusArc are documented here.
 
 ## [Unreleased]
 
+### Added
+- Active VPN connections now show a compact shield beside the composite menu-bar icon and include the VPN service name in connectivity text when macOS provides one.
+
 ### Fixed
 - When a VPN or tunnel owns the default route, the menu-bar network indicator now represents the active physical Wi-Fi or Ethernet connection carrying it instead of showing disconnected-style dim dots.
 
