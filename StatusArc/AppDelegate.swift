@@ -109,8 +109,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
 
     private var fallbackRefreshTimer: Timer?
     private var appearanceObservation: NSKeyValueObservation?
-    private var lastIconSnapshot: StatusSnapshot?
-    private var iconAnimation: StatusIconAnimation?
     private var inputSources: [TISInputSource] = []
     private var scannedNetworks: [CWNetwork] = []
     private var wifiOperation: WiFiOperation = .idle
@@ -166,7 +164,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         fallbackRefreshTimer?.invalidate()
         appearanceObservation?.invalidate()
         monitor.stopMonitoring()
-        iconAnimation?.stop()
         panelController?.hide(animated: false)
         updateManager.stop()
     }
@@ -470,36 +467,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     }
 
     private func updateStatusIcon(_ snapshot: StatusSnapshot) {
-        let previous = lastIconSnapshot
-        lastIconSnapshot = snapshot
-        let accessoryChanged = previous.map {
-            StatusIconRenderer.accessoryState(for: $0.battery)
-                != StatusIconRenderer.accessoryState(for: snapshot.battery)
-        } ?? false
-        let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-
-        if !accessoryChanged, iconAnimation?.isAnimating == true, !reduceMotion {
-            return
-        }
-        iconAnimation?.stop()
-        iconAnimation = nil
-
-        guard let previous, accessoryChanged, !reduceMotion else {
-            applyStatusIcon(renderer.render(snapshot: snapshot))
-            return
-        }
-
-        let animation = StatusIconAnimation(duration: 0.18, animationCurve: .easeInOut)
-        animation.animationBlockingMode = .nonblocking
-        animation.frameRate = 60
-        animation.onFrame = { [weak self] progress in
-            guard let self else { return }
-            self.applyStatusIcon(self.renderer.render(
-                snapshot: snapshot, from: previous, progress: progress
-            ))
-        }
-        iconAnimation = animation
-        animation.start()
+        applyStatusIcon(renderer.render(snapshot: snapshot))
     }
 
     private func applyStatusIcon(_ image: NSImage) {
@@ -1305,19 +1273,4 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     @objc private func quit() {
         NSApp.terminate(nil)
     }
-}
-
-// AppKit schedules frames only during a short accessory transition.
-private final class StatusIconAnimation: NSAnimation {
-    var onFrame: ((CGFloat) -> Void)?
-
-    override var currentProgress: NSAnimation.Progress {
-        get { super.currentProgress }
-        set {
-            super.currentProgress = newValue
-            onFrame?(CGFloat(currentValue))
-        }
-    }
-
-    override var runLoopModesForAnimating: [RunLoop.Mode]? { [.common] }
 }

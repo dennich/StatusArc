@@ -6,55 +6,8 @@ final class StatusIconRenderer {
     static let baseItemWidth: CGFloat = 24
     private static let imageHeight: CGFloat = 22
 
-    enum AccessoryState {
-        case none, bolt, plug
-    }
-
-    private static func accessoryExtent(for state: AccessoryState) -> CGFloat {
-        switch state {
-        case .none: return 0
-        case .bolt: return 10
-        case .plug: return 12
-        }
-    }
-
-    static func accessoryState(for battery: BatteryStatus?) -> AccessoryState {
-        guard let battery else { return .none }
-        switch battery.powerState {
-        case .onBattery:
-            return .none
-        case .charging:
-            return .bolt
-        case .fullyCharged, .connectedNotCharging:
-            return .plug
-        }
-    }
-
-    func render(
-        snapshot: StatusSnapshot,
-        from previousSnapshot: StatusSnapshot? = nil,
-        progress: CGFloat = 1
-    ) -> NSImage {
-        let bright = NSColor.labelColor
-        let accessory = batteryAccessory(snapshot.battery, foreground: bright)
-        let previousSnapshot = previousSnapshot ?? snapshot
-        let previousAccessory = batteryAccessory(previousSnapshot.battery, foreground: bright)
-        let progress = min(max(progress, 0), 1)
-        let oldWidth = previousAccessory?.size.width ?? 0
-        let newWidth = accessory?.size.width ?? 0
-        let accessoryWidth = oldWidth + (newWidth - oldWidth) * progress
-        let oldExtent = Self.accessoryExtent(
-            for: Self.accessoryState(for: previousSnapshot.battery)
-        )
-        let newExtent = Self.accessoryExtent(
-            for: Self.accessoryState(for: snapshot.battery)
-        )
-        let imageSize = NSSize(
-            width: Self.baseItemWidth
-                + oldExtent
-                + (newExtent - oldExtent) * progress,
-            height: Self.imageHeight
-        )
+    func render(snapshot: StatusSnapshot) -> NSImage {
+        let imageSize = NSSize(width: Self.baseItemWidth, height: Self.imageHeight)
         let image = NSImage(size: imageSize, flipped: false) { [weak self] _ in
             guard
                 let self,
@@ -74,7 +27,7 @@ final class StatusIconRenderer {
             let differentiateWithoutColor = NSWorkspace.shared
                 .accessibilityDisplayShouldDifferentiateWithoutColor
             // The original arc has 3 points of transparent inset on its left.
-            // Remove that inset without changing its radius or the bolt gap.
+            // Remove that inset without changing its radius.
             let compositeRect = NSRect(
                 x: -3,
                 y: 0, width: 30, height: imageSize.height
@@ -105,28 +58,6 @@ final class StatusIconRenderer {
                 dim: dim
             )
 
-            // Keep the accessory clear of the longer arc without changing the
-            // symbol itself or the dynamic status-item widths.
-            let accessoryCenterX = compositeRect.midX + 14 + accessoryWidth / 2
-            func drawAccessory(_ image: NSImage?, opacity: CGFloat) {
-                guard let image, opacity > 0 else { return }
-                image.draw(
-                    in: NSRect(
-                        x: accessoryCenterX - image.size.width / 2,
-                        y: (imageSize.height - image.size.height) / 2,
-                        width: image.size.width, height: image.size.height
-                    ),
-                    from: .zero, operation: .sourceOver, fraction: opacity
-                )
-            }
-            if Self.accessoryState(for: previousSnapshot.battery)
-                == Self.accessoryState(for: snapshot.battery) {
-                drawAccessory(accessory, opacity: 1)
-            } else {
-                drawAccessory(previousAccessory, opacity: 1 - progress)
-                drawAccessory(accessory, opacity: progress)
-            }
-
             return true
         }
 
@@ -148,6 +79,9 @@ final class StatusIconRenderer {
         let lineWidth: CGFloat = 1.75
         let startAngle = CGFloat.pi * (10.0 / 9.0)
         let endAngle = -CGFloat.pi / 9.0
+        let leftGapAngle = CGFloat.pi * (11.0 / 18.0)
+        let rightGapAngle = CGFloat.pi * (7.0 / 18.0)
+        let hasTopIndicator = battery.map { $0.powerState != .onBattery } ?? false
 
         let activeColor: NSColor
         let remainderColor: NSColor
@@ -162,92 +96,139 @@ final class StatusIconRenderer {
             remainderColor = dim
         }
 
-        // Full dim arc is always visible.
-        context.saveGState()
-        context.setStrokeColor(remainderColor.cgColor)
         let accessibleLineWidth = differentiateWithoutColor && battery?.isLowBattery == true
             ? lineWidth + 0.65
             : lineWidth
-        context.setLineWidth(accessibleLineWidth)
-        context.setLineCap(.round)
-        if differentiateWithoutColor && battery?.isLowPowerModeEnabled == true
-            && battery?.isLowBattery != true {
-            context.setLineDash(phase: 0, lengths: [2.4, 1.5])
+
+        func strokeArc(from arcStart: CGFloat, to arcEnd: CGFloat, color: NSColor) {
+            context.saveGState()
+            context.setStrokeColor(color.cgColor)
+            context.setLineWidth(accessibleLineWidth)
+            context.setLineCap(.round)
+            if differentiateWithoutColor && battery?.isLowPowerModeEnabled == true
+                && battery?.isLowBattery != true {
+                context.setLineDash(phase: 0, lengths: [2.4, 1.5])
+            }
+            context.addArc(
+                center: center,
+                radius: radius,
+                startAngle: arcStart,
+                endAngle: arcEnd,
+                clockwise: true
+            )
+            context.strokePath()
+            context.restoreGState()
         }
-        context.addArc(
-            center: center,
-            radius: radius,
-            startAngle: startAngle,
-            endAngle: endAngle,
-            clockwise: true
-        )
-        context.strokePath()
-        context.restoreGState()
+
+        // Battery power uses one continuous arc. External-power states reserve
+        // a small top gap for their compact power indicator.
+        if hasTopIndicator {
+            strokeArc(from: startAngle, to: leftGapAngle, color: remainderColor)
+            strokeArc(from: rightGapAngle, to: endAngle, color: remainderColor)
+        } else {
+            strokeArc(from: startAngle, to: endAngle, color: remainderColor)
+        }
 
         guard let battery else { return }
 
         let fraction = min(max(battery.level, 0.0), 1.0)
-        guard fraction > 0 else { return }
+        if fraction > 0 {
+            if hasTopIndicator {
+                // The two 90-degree segments together represent 100%.
+                let activeSweep = CGFloat.pi * CGFloat(fraction)
+                let segmentSweep = CGFloat.pi / 2
+                let leftSweep = min(activeSweep, segmentSweep)
+                strokeArc(from: startAngle, to: startAngle - leftSweep, color: activeColor)
 
-        // The highlighted segment length is the exact battery percentage.
-        let sweep = CGFloat.pi * (11.0 / 9.0)
-        let activeEndAngle = startAngle - (sweep * CGFloat(fraction))
-
-        context.saveGState()
-        context.setStrokeColor(activeColor.cgColor)
-        context.setLineWidth(accessibleLineWidth)
-        context.setLineCap(.round)
-        if differentiateWithoutColor && battery.isLowPowerModeEnabled
-            && !battery.isLowBattery {
-            context.setLineDash(phase: 0, lengths: [2.4, 1.5])
+                let rightSweep = max(activeSweep - segmentSweep, 0)
+                if rightSweep > 0 {
+                    strokeArc(
+                        from: rightGapAngle,
+                        to: rightGapAngle - rightSweep,
+                        color: activeColor
+                    )
+                }
+            } else {
+                // The highlighted segment length is the exact battery percentage.
+                let sweep = CGFloat.pi * (11.0 / 9.0)
+                strokeArc(
+                    from: startAngle,
+                    to: startAngle - (sweep * CGFloat(fraction)),
+                    color: activeColor
+                )
+            }
         }
-        context.addArc(
-            center: center,
-            radius: radius,
-            startAngle: startAngle,
-            endAngle: activeEndAngle,
-            clockwise: true
-        )
-        context.strokePath()
-        context.restoreGState()
+
+        drawTopPowerIndicator(battery, in: context, rect: rect, color: bright)
     }
 
-    private func batteryAccessory(_ battery: BatteryStatus?, foreground: NSColor) -> NSImage? {
-        let symbolName: String
-        let pointSize: CGFloat
-        let maximumSize: NSSize
-        let weight: NSFont.Weight
-        switch Self.accessoryState(for: battery) {
-        case .none:
-            return nil
-        case .bolt:
-            symbolName = "bolt.fill"
-            pointSize = 10
-            maximumSize = NSSize(width: 8, height: 12)
-            weight = .regular
-        case .plug:
-            symbolName = NSImage(systemSymbolName: "powerplug.portrait.fill", accessibilityDescription: nil) == nil
-                ? "powerplug.fill"
-                : "powerplug.portrait.fill"
-            pointSize = 11.5
-            // The plug receives two extra item-width points so it can grow
-            // without clipping or moving toward the arc.
-            maximumSize = NSSize(width: 9, height: 13)
-            weight = .semibold
+    private func drawTopPowerIndicator(
+        _ battery: BatteryStatus,
+        in context: CGContext,
+        rect: NSRect,
+        color: NSColor
+    ) {
+        switch battery.powerState {
+        case .onBattery:
+            return
+
+        case .charging:
+            let text = String(battery.displayedPercentage)
+            var fontSize: CGFloat = 5
+            var line = roundedTextLine(
+                text,
+                size: fontSize,
+                weight: .heavy,
+                color: color
+            )
+            var glyphBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
+            let maximumWidth: CGFloat = 7.2
+            if glyphBounds.width > maximumWidth {
+                fontSize *= maximumWidth / glyphBounds.width
+                line = roundedTextLine(
+                    text,
+                    size: fontSize,
+                    weight: .heavy,
+                    color: color
+                )
+                glyphBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
+            }
+
+            context.saveGState()
+            context.textMatrix = .identity
+            context.textPosition = CGPoint(
+                x: rect.midX - glyphBounds.midX,
+                y: 19 - glyphBounds.midY
+            )
+            CTLineDraw(line, context)
+            context.restoreGState()
+
+        case .fullyCharged, .connectedNotCharging:
+            let configuration = NSImage.SymbolConfiguration(pointSize: 5.5, weight: .bold)
+                .applying(.init(paletteColors: [color]))
+            guard let bolt = NSImage(
+                systemSymbolName: "bolt.fill",
+                accessibilityDescription: nil
+            )?.withSymbolConfiguration(configuration) else { return }
+
+            let maximumSize = NSSize(width: 3.5, height: 5.5)
+            let scale = min(
+                maximumSize.width / bolt.size.width,
+                maximumSize.height / bolt.size.height
+            )
+            let size = NSSize(width: bolt.size.width * scale, height: bolt.size.height * scale)
+            bolt.draw(
+                in: NSRect(
+                    x: rect.midX - size.width / 2,
+                    y: 19 - size.height / 2,
+                    width: size.width,
+                    height: size.height
+                ),
+                from: .zero,
+                operation: .sourceOver,
+                fraction: 1
+            )
         }
-
-        let configuration = NSImage.SymbolConfiguration(pointSize: pointSize, weight: weight)
-            .applying(.init(paletteColors: [foreground]))
-        guard let symbol = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)?
-            .withSymbolConfiguration(configuration) else { return nil }
-
-        // Preserve each symbol's aspect ratio and the original arc/accessory gap.
-        let scale = min(
-            maximumSize.width / symbol.size.width,
-            maximumSize.height / symbol.size.height
-        )
-        symbol.size = NSSize(width: symbol.size.width * scale, height: symbol.size.height * scale)
-        return symbol
     }
 
     private func drawInputSourceLabel(
@@ -327,12 +308,12 @@ final class StatusIconRenderer {
         rect: NSRect,
         color: NSColor
     ) {
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 6.25, weight: .bold),
-            .foregroundColor: color
-        ]
-        let line = CTLineCreateWithAttributedString(
-            NSAttributedString(string: "VPN", attributes: attributes)
+        let line = roundedTextLine(
+            "VPN",
+            size: 5,
+            weight: .bold,
+            color: color,
+            kern: 0.5
         )
         let glyphBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
 
@@ -340,10 +321,33 @@ final class StatusIconRenderer {
         context.textMatrix = .identity
         context.textPosition = CGPoint(
             x: rect.midX - glyphBounds.midX,
-            y: 2.6 - glyphBounds.midY
+            y: 4 - glyphBounds.midY
         )
         CTLineDraw(line, context)
         context.restoreGState()
+    }
+
+    private func roundedTextLine(
+        _ text: String,
+        size: CGFloat,
+        weight: NSFont.Weight,
+        color: NSColor,
+        kern: CGFloat? = nil
+    ) -> CTLine {
+        let baseFont = NSFont.systemFont(ofSize: size, weight: weight)
+        let descriptor = baseFont.fontDescriptor.withDesign(.rounded)
+            ?? baseFont.fontDescriptor
+        let font = NSFont(descriptor: descriptor, size: size) ?? baseFont
+        var attributes: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: color
+        ]
+        if let kern {
+            attributes[.kern] = kern
+        }
+        return CTLineCreateWithAttributedString(
+            NSAttributedString(string: text, attributes: attributes)
+        )
     }
 
     private func drawWiFiDots(

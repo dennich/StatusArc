@@ -27,35 +27,36 @@ control behavior, keyboard navigation, accessibility, and enabled states.
 ## Battery
 
 - Confirm the arc roughly matches the current percentage.
-- Confirm the full track spans 240 degrees and leaves a centered bottom gap.
+- On battery power, confirm the track is one continuous 220-degree arc with no
+  top gap.
 - Confirm the unused arc is dimmed.
 - Confirm the Battery island reports percentage and charging/fully charged
   state without a disclosure chevron.
 - Confirm clicking the Battery island does not expand it or open a submenu.
 - Inject synthetic snapshots in a development harness to validate the following matrix without changing system power settings:
 
-| Percentage | Low Power Mode | macOS warning | Charging | Expected arc / accessory |
+| Percentage | Low Power Mode | macOS warning | Power state | Expected arc / top indicator |
 | --- | --- | --- | --- | --- |
-| 80% | off | none | no | normal / none |
-| 26% | off | none | no | normal / none |
-| 25% | off | none | no | normal / none |
-| 10% | off | none | no | normal / none |
-| 80% | on | none | no | yellow / none |
-| 20% | on | none | no | yellow / none |
-| 30% | off | early | no | red / none |
-| 30% | off | final | no | red / none |
-| 80% | off | none | yes | normal / bolt |
-| 20% | off | none | yes | normal / bolt |
-| 80% | on | none | yes | yellow / bolt |
-| 20% | on | none | yes | yellow / bolt |
-| 30% | off and on | early and final | yes | red / bolt |
+| 80% | off | none | battery | continuous normal / none |
+| 26% | off | none | battery | continuous normal / none |
+| 25% | off | none | battery | continuous normal / none |
+| 10% | off | none | battery | continuous normal / none |
+| 80% | on | none | battery | continuous yellow / none |
+| 20% | on | none | battery | continuous yellow / none |
+| 30% | off | early | battery | continuous red / none |
+| 30% | off | final | battery | continuous red / none |
+| 80% | off | none | charging | split normal / `80` |
+| 20% | off | none | charging | split normal / `20` |
+| 80% | on | none | charging | split yellow / `80` |
+| 20% | on | none | charging | split yellow / `20` |
+| 30% | off and on | early and final | charging | split red / `30` |
+| 80% | off | none | external, not charging | split normal / bolt |
+| 100% | off | none | fully charged | split normal / bolt |
 
-Also confirm that external power with charging paused, charging complete, or
-the battery otherwise not charging shows the plug accessory and an accurate
-panel label rather than claiming active charging.
-
-- Confirm the plug is vertical, slightly larger than before, and has comparable
-  visual weight to the bolt without changing the arc radius or accessory gap.
+Confirm charging percentages use compact rounded heavy type and fit at 100%.
+External power with charging paused, charging complete, or the battery otherwise
+not charging must show a compact bolt and an accurate panel label rather than
+claiming active charging.
 
 - Check that percentage alone never triggers a warning: 25.49% displays 25%, 25.50% displays 26%, and neither is urgent without a system warning. Also check 0% and 10% with no warning.
 - Confirm early/final macOS warnings show a red arc without a dot, including with Low Power Mode enabled.
@@ -63,16 +64,14 @@ panel label rather than claiming active charging.
 - Confirm language and network colors remain independent of battery colors.
 - Check 0%, 100%, unavailable battery, and fully charged snapshots.
 - Check both light and dark appearances at normal size and Retina scale.
-- Switch repeatedly among no accessory, bolt, and plug: image and item widths
-  must match 24, 34, and 36 points respectively, with a constant 22-point image
-  height. A low-battery warning alone must not add a dot or widen the item.
-  Neighboring items should move with expansion/contraction.
-- Confirm icon sizes and internal spacing remain unchanged in every settled state and throughout resizing; check that no automatic image scaling squeezes the artwork.
-- Confirm accessories stay outside the arc, remain vertically centered, and never pulse.
-- Confirm bolt appearance and disappearance use one short, smooth shift/fade; unchanged state must not restart the animation.
-- Enable Reduce Motion and confirm the image and item width reach their final state immediately without animated resizing or fading.
+- Switch repeatedly among battery, charging, and external-power states. The
+  image and native item must remain 24 × 22 points, and neighboring menu-bar
+  items must not move.
+- Confirm the top number or bolt remains centered inside the split-arc gap and
+  does not collide with the arc at 0%, 100%, or increased-contrast widths.
+- Confirm the button never automatically scales or squeezes the artwork.
 - Check transitions with the menu open and after wake; confirm the final icon matches the reported charging/warning state.
-- Confirm this change adds no system-state polling or permission requests; animation frames run only during transitions.
+- Confirm this change adds no system-state polling or permission requests.
 
 ## Wi-Fi
 
@@ -108,6 +107,8 @@ panel label rather than claiming active charging.
   `VPN` replaces the dots or line in the compact icon. Confirm the panel, menu,
   tooltip, and accessibility value name the VPN, and disconnecting it restores
   the physical Wi-Fi or Ethernet indicator without changing item width.
+- Confirm `VPN` uses small rounded bold type with clearly visible letter spacing
+  and stays optically centered in the bottom gap.
 
 ## Input sources
 
