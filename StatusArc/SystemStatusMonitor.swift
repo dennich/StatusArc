@@ -400,7 +400,7 @@ final class SystemStatusMonitor: NSObject, CWEventDelegate {
         let wifiNames = Set(wifiInterfaces.compactMap(\.interfaceName))
         let defaultWiFi = wifiClient.interface()
 
-        guard let primaryInterface = readPrimaryInterfaceName() else {
+        guard let primaryInterface = readPrimaryInterfaceName(wifiNames: wifiNames) else {
             guard let defaultWiFi else { return .disconnected }
             if defaultWiFi.powerOn(), defaultWiFi.rssiValue() < 0 {
                 return .wifi(
@@ -439,7 +439,7 @@ final class SystemStatusMonitor: NSObject, CWEventDelegate {
             )
         }
 
-        if isEthernetLike(primaryInterface) {
+        if isEthernetLike(primaryInterface, wifiNames: wifiNames) {
             return .ethernet(
                 interfaceName: primaryInterface,
                 connectivity: connectivity
@@ -460,7 +460,7 @@ final class SystemStatusMonitor: NSObject, CWEventDelegate {
         return 1
     }
 
-    private func readPrimaryInterfaceName() -> String? {
+    private func readPrimaryInterfaceName(wifiNames: Set<String>) -> String? {
         guard let store = SCDynamicStoreCreate(
             nil,
             "StatusArc" as CFString,
@@ -475,6 +475,7 @@ final class SystemStatusMonitor: NSObject, CWEventDelegate {
             "State:/Network/Global/IPv6"
         ]
 
+        var routedInterface: String?
         for key in globalNetworkKeys {
             guard
                 let value = SCDynamicStoreCopyValue(store, key as CFString)
@@ -485,14 +486,74 @@ final class SystemStatusMonitor: NSObject, CWEventDelegate {
                 continue
             }
 
-            return interfaceName
+            routedInterface = interfaceName
+            break
+        }
+
+        if let routedInterface,
+           wifiNames.contains(routedInterface)
+            || isEthernetLike(routedInterface, wifiNames: wifiNames) {
+            return routedInterface
+        }
+
+        // A VPN or tunnel can own the default route even though Wi-Fi or
+        // Ethernet remains the physical link carrying it. Use macOS's service
+        // order to select the first active physical interface in that case.
+        return readActivePhysicalInterfaceName(from: store, wifiNames: wifiNames)
+            ?? routedInterface
+    }
+
+    private func readActivePhysicalInterfaceName(
+        from store: SCDynamicStore,
+        wifiNames: Set<String>
+    ) -> String? {
+        guard
+            let globalSetup = SCDynamicStoreCopyValue(
+                store,
+                "Setup:/Network/Global/IPv4" as CFString
+            ) as? [String: Any],
+            let serviceOrder = globalSetup["ServiceOrder"] as? [String]
+        else {
+            return nil
+        }
+
+        for serviceID in serviceOrder {
+            let interfaceKey = "Setup:/Network/Service/\(serviceID)/Interface"
+            guard
+                let interface = SCDynamicStoreCopyValue(store, interfaceKey as CFString)
+                    as? [String: Any],
+                let interfaceName = interface["DeviceName"] as? String,
+                wifiNames.contains(interfaceName)
+                    || isEthernetLike(interfaceName, wifiNames: wifiNames)
+            else {
+                continue
+            }
+
+            let addressFamilies = ["IPv4", "IPv6"]
+            let hasAddress = addressFamilies.contains { family in
+                let stateKey = "State:/Network/Service/\(serviceID)/\(family)"
+                guard
+                    let state = SCDynamicStoreCopyValue(store, stateKey as CFString)
+                        as? [String: Any],
+                    let addresses = state["Addresses"] as? [String]
+                else {
+                    return false
+                }
+                return !addresses.isEmpty
+            }
+
+            if hasAddress {
+                return interfaceName
+            }
         }
 
         return nil
     }
 
-    private func isEthernetLike(_ interfaceName: String) -> Bool {
-        let wifiNames = Set((wifiClient.interfaces() ?? []).compactMap(\.interfaceName))
+    private func isEthernetLike(
+        _ interfaceName: String,
+        wifiNames: Set<String>
+    ) -> Bool {
         guard !wifiNames.contains(interfaceName) else { return false }
 
         return interfaceName.hasPrefix("en")

@@ -103,8 +103,10 @@ panel label rather than claiming active charging.
 - Confirm macOS makes it the primary path when expected.
 - Confirm the bottom dots switch to a solid line.
 - Disconnect Ethernet and confirm StatusArc returns to the active Wi-Fi state.
-- Make a VPN or tunnel interface primary and confirm StatusArc does not show the
-  Ethernet line for it.
+- Make a VPN or tunnel interface primary and confirm StatusArc continues to
+  show the Wi-Fi dots or Ethernet line for the active physical connection
+  carrying it, rather than treating the tunnel itself as Ethernet or showing
+  disconnected-style dim dots.
 
 ## Input sources
 

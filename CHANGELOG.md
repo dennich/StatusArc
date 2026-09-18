@@ -4,6 +4,9 @@ All notable user-visible changes to StatusArc are documented here.
 
 ## [Unreleased]
 
+### Fixed
+- When a VPN or tunnel owns the default route, the menu-bar network indicator now represents the active physical Wi-Fi or Ethernet connection carrying it instead of showing disconnected-style dim dots.
+
 ## [1.3.0] - 2026-09-17
 
 ### Changed

@@ -83,7 +83,8 @@ a per-user Login Item. It does not install a helper, launch agent, or daemon.
 Reads passive system state:
 
 - battery and charging state through IOKit;
-- primary network interface through SystemConfiguration;
+- primary network interface through SystemConfiguration, falling back to the
+  first active physical service when a VPN or tunnel owns the default route;
 - Wi-Fi RSSI through CoreWLAN;
 - Internet-path availability through Network.framework;
 - current keyboard input source through Text Input Source Services.
