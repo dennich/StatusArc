@@ -79,8 +79,8 @@ final class StatusIconRenderer {
         let lineWidth: CGFloat = 1.75
         let startAngle = CGFloat.pi * (10.0 / 9.0)
         let endAngle = -CGFloat.pi / 9.0
-        let leftGapAngle = CGFloat.pi * (11.0 / 18.0)
-        let rightGapAngle = CGFloat.pi * (7.0 / 18.0)
+        let leftGapAngle = CGFloat.pi * (2.0 / 3.0)
+        let rightGapAngle = CGFloat.pi / 3.0
         let hasTopIndicator = battery.map { $0.powerState != .onBattery } ?? false
 
         let activeColor: NSColor
@@ -134,9 +134,9 @@ final class StatusIconRenderer {
         let fraction = min(max(battery.level, 0.0), 1.0)
         if fraction > 0 {
             if hasTopIndicator {
-                // The two 90-degree segments together represent 100%.
-                let activeSweep = CGFloat.pi * CGFloat(fraction)
-                let segmentSweep = CGFloat.pi / 2
+                // The two 80-degree segments together represent 100%.
+                let segmentSweep = startAngle - leftGapAngle
+                let activeSweep = segmentSweep * 2 * CGFloat(fraction)
                 let leftSweep = min(activeSweep, segmentSweep)
                 strokeArc(from: startAngle, to: startAngle - leftSweep, color: activeColor)
 
@@ -174,30 +174,21 @@ final class StatusIconRenderer {
 
         case .charging:
             let text = String(battery.displayedPercentage)
-            var fontSize: CGFloat = 5
-            var line = roundedTextLine(
+            let fontSize: CGFloat = text.count >= 3 ? 7 : 8
+            let line = roundedTextLine(
                 text,
                 size: fontSize,
                 weight: .heavy,
                 color: color
             )
-            var glyphBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
-            let maximumWidth: CGFloat = 7.2
-            if glyphBounds.width > maximumWidth {
-                fontSize *= maximumWidth / glyphBounds.width
-                line = roundedTextLine(
-                    text,
-                    size: fontSize,
-                    weight: .heavy,
-                    color: color
-                )
-                glyphBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
-            }
+            let glyphBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
+            let maximumWidth: CGFloat = 8.5
+            let horizontalScale = min(maximumWidth / glyphBounds.width, 1)
 
             context.saveGState()
-            context.textMatrix = .identity
+            context.textMatrix = CGAffineTransform(scaleX: horizontalScale, y: 1)
             context.textPosition = CGPoint(
-                x: rect.midX - glyphBounds.midX,
+                x: rect.midX - glyphBounds.midX * horizontalScale,
                 y: 19 - glyphBounds.midY
             )
             CTLineDraw(line, context)

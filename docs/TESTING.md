@@ -53,7 +53,7 @@ control behavior, keyboard navigation, accessibility, and enabled states.
 | 80% | off | none | external, not charging | split normal / bolt |
 | 100% | off | none | fully charged | split normal / bolt |
 
-Confirm charging percentages use compact rounded heavy type and fit at 100%.
+Confirm charging percentages use clearly legible rounded heavy type and fit at 100%.
 External power with charging paused, charging complete, or the battery otherwise
 not charging must show a compact bolt and an accurate panel label rather than
 claiming active charging.

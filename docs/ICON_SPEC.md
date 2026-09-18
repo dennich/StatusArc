@@ -9,11 +9,12 @@ bottom network indicator.
 
 - On battery power, use one continuous 220-degree arc with no top gap.
 - While charging, split the arc around a small top gap and show the rounded
-  battery percentage, without a percent sign, in that gap.
+  battery percentage, without a percent sign, in that gap. Size the number for
+  real menu-bar legibility rather than preserving Figma's nominal 5-point type.
 - When connected to external power but not charging, including when fully
   charged, split the arc and show a `bolt.fill` whose visible mark matches the
   2 × 4-point Figma vector in the top gap.
-- Across the two 90-degree segments of a split arc, the combined active track
+- Across the two 80-degree segments of a split arc, the combined active track
   length still equals the exact battery percentage.
 
 - The active track length equals the exact current battery percentage.
