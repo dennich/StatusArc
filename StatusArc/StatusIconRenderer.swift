@@ -186,10 +186,10 @@ final class StatusIconRenderer {
             context.saveGState()
             context.textMatrix = CGAffineTransform(scaleX: horizontalScale, y: 1)
             context.textPosition = CGPoint(
-                x: rect.midX - glyphBounds.midX * horizontalScale,
-                // Align the visible numeral with the arc-cap centers. The
-                // previous shared symbol center left the numerals too high.
-                y: 18 - glyphBounds.midY
+                // A small optical correction balances the rounded numerals
+                // within the arc gap while retaining their original height.
+                x: rect.midX - glyphBounds.midX * horizontalScale - 0.5,
+                y: 19 - glyphBounds.midY
             )
             CTLineDraw(line, context)
             context.restoreGState()
