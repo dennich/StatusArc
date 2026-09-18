@@ -4,6 +4,8 @@ All notable user-visible changes to StatusArc are documented here.
 
 ## [Unreleased]
 
+## [1.3.5] - 2026-09-18
+
 ### Changed
 - Charging uses a broad horizontal bolt, while socket power and every displayed 100% battery use a horizontal plug for clearer recognition in the compact menu-bar frame.
 
