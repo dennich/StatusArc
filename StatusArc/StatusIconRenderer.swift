@@ -192,14 +192,13 @@ final class StatusIconRenderer {
             context.restoreGState()
 
         case .charging:
-            // SF Symbols include generous alignment padding. Use a larger
-            // symbol frame so the visible bolt matches Figma's 2 × 4-point
-            // vector rather than inheriting the tiny padded glyph size.
             drawTopSymbol(
                 "bolt.fill",
-                pointSize: 9.5,
+                pointSize: 13,
                 weight: .bold,
-                maximumSize: NSSize(width: 6, height: 9.5),
+                maximumSize: NSSize(width: 12, height: 7.5),
+                rotation: -.pi / 2,
+                context: context,
                 in: rect,
                 color: color
             )
@@ -211,9 +210,11 @@ final class StatusIconRenderer {
             ) == nil ? "powerplug.fill" : "powerplug.portrait.fill"
             drawTopSymbol(
                 symbolName,
-                pointSize: 9.5,
+                pointSize: 13,
                 weight: .semibold,
-                maximumSize: NSSize(width: 4.5, height: 6.5),
+                maximumSize: NSSize(width: 11.5, height: 7.5),
+                rotation: -.pi / 2,
+                context: context,
                 in: rect,
                 color: color
             )
@@ -225,6 +226,8 @@ final class StatusIconRenderer {
         pointSize: CGFloat,
         weight: NSFont.Weight,
         maximumSize: NSSize,
+        rotation: CGFloat = 0,
+        context: CGContext,
         in rect: NSRect,
         color: NSColor
     ) {
@@ -235,18 +238,26 @@ final class StatusIconRenderer {
             accessibilityDescription: nil
         )?.withSymbolConfiguration(configuration) else { return }
 
+        let cosine = abs(cos(rotation))
+        let sine = abs(sin(rotation))
+        let rotatedWidth = symbol.size.width * cosine + symbol.size.height * sine
+        let rotatedHeight = symbol.size.width * sine + symbol.size.height * cosine
         let scale = min(
-            maximumSize.width / symbol.size.width,
-            maximumSize.height / symbol.size.height
+            maximumSize.width / rotatedWidth,
+            maximumSize.height / rotatedHeight
         )
         let size = NSSize(
             width: symbol.size.width * scale,
             height: symbol.size.height * scale
         )
+
+        context.saveGState()
+        context.translateBy(x: rect.midX, y: 18.25)
+        context.rotate(by: rotation)
         symbol.draw(
             in: NSRect(
-                x: rect.midX - size.width / 2,
-                y: 19 - size.height / 2,
+                x: -size.width / 2,
+                y: -size.height / 2,
                 width: size.width,
                 height: size.height
             ),
@@ -254,6 +265,7 @@ final class StatusIconRenderer {
             operation: .sourceOver,
             fraction: 1
         )
+        context.restoreGState()
     }
 
     private func drawInputSourceLabel(

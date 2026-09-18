@@ -4,6 +4,9 @@ All notable user-visible changes to StatusArc are documented here.
 
 ## [Unreleased]
 
+### Changed
+- Charging and socket-power indicators are larger and rotated 90 degrees clockwise for clearer recognition in the compact menu-bar frame.
+
 ## [1.3.4] - 2026-09-18
 
 ### Changed

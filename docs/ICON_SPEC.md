@@ -11,11 +11,11 @@ bottom network indicator.
   Use 7-point rounded regular type with zero letter spacing. A full battery that
   remains on battery power still shows `100`; external power state, rather than
   percentage alone, determines whether the plug appears.
-- While actively charging, show a `bolt.fill` whose visible mark matches the
-  2 × 4-point Figma vector.
+- While actively charging, show an enlarged `bolt.fill` rotated 90 degrees
+  clockwise and centered inside the top gap.
 - When connected to socket power but not charging, including when fully
-  charged, show a compact vertical filled plug that stays clear of the input
-  label.
+  charged, show an enlarged filled plug rotated 90 degrees clockwise, with
+  comparable visual weight to the charging bolt.
 - Keep a wide top gap around every indicator so rounded arc caps never overlap
   the number or symbol.
 - Across the two 55-degree segments of the split arc, the combined active track
