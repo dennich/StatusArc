@@ -4,6 +4,8 @@ All notable user-visible changes to StatusArc are documented here.
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-09-21
+
 ### Added
 - StatusArc now ships with a complete native macOS app-icon asset set, including individually rendered 16–1024 px variants based on the composite status motif.
 
