@@ -108,10 +108,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     private var expandedInterfaceDelegate: AnyObject?
 
     private var fallbackRefreshTimer: Timer?
+    private var networkActivityTimer: Timer?
     private var appearanceObservation: NSKeyValueObservation?
     private var inputSources: [TISInputSource] = []
     private var scannedNetworks: [CWNetwork] = []
-    private var wifiOperation: WiFiOperation = .idle
+    private var latestSnapshot: StatusSnapshot?
+    private var networkAnimationActivity: StatusIconNetworkActivity = .idle
+    private var networkAnimationPhase = 0
+    private var wifiOperation: WiFiOperation = .idle {
+        didSet {
+            guard wifiOperation != oldValue else { return }
+            synchronizeNetworkActivityAnimation()
+        }
+    }
 
     private let connectivityMenuItem = NSMenuItem(title: "Connectivity", action: nil, keyEquivalent: "")
     private let connectivityMenu = NSMenu(title: "Connectivity")
@@ -162,6 +171,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
 
     func applicationWillTerminate(_ notification: Notification) {
         fallbackRefreshTimer?.invalidate()
+        networkActivityTimer?.invalidate()
         appearanceObservation?.invalidate()
         monitor.stopMonitoring()
         panelController?.hide(animated: false)
@@ -382,10 +392,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     private func refresh() {
         reconcileWiFiOperation()
         let snapshot = monitor.snapshot()
+        latestSnapshot = snapshot
+        synchronizeNetworkActivityAnimation()
 
         updateStatusIcon(snapshot)
-        statusItem.button?.toolTip = snapshot.tooltip
-        statusItem.button?.setAccessibilityValue(snapshot.tooltip)
+        updateStatusItemDescription(snapshot)
 
         updateNetworkMenu(snapshot)
         updateInputMenu(snapshot)
@@ -467,7 +478,86 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     }
 
     private func updateStatusIcon(_ snapshot: StatusSnapshot) {
-        applyStatusIcon(renderer.render(snapshot: snapshot))
+        let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        applyStatusIcon(renderer.render(
+            snapshot: snapshot,
+            networkActivity: statusIconNetworkActivity,
+            animationPhase: networkAnimationPhase,
+            reduceMotion: reduceMotion,
+            appearance: statusItem.button?.effectiveAppearance
+        ))
+    }
+
+    private var statusIconNetworkActivity: StatusIconNetworkActivity {
+        switch wifiOperation {
+        case .scanning:
+            return .refreshing
+        case .connecting:
+            return .connecting
+        case .idle, .changingPower, .disconnecting:
+            return .idle
+        }
+    }
+
+    private func synchronizeNetworkActivityAnimation() {
+        let activity = statusIconNetworkActivity
+        let shouldAnimate = activity != .idle
+            && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        let timerStateMatches = (networkActivityTimer != nil) == shouldAnimate
+
+        guard activity != networkAnimationActivity || !timerStateMatches else {
+            return
+        }
+
+        networkActivityTimer?.invalidate()
+        networkActivityTimer = nil
+        networkAnimationActivity = activity
+        networkAnimationPhase = 0
+
+        if shouldAnimate {
+            let timer = Timer(
+                timeInterval: 0.18,
+                target: self,
+                selector: #selector(networkActivityTimerFired),
+                userInfo: nil,
+                repeats: true
+            )
+            networkActivityTimer = timer
+            RunLoop.main.add(timer, forMode: .common)
+        }
+
+        if let latestSnapshot {
+            updateStatusIcon(latestSnapshot)
+            updateStatusItemDescription(latestSnapshot)
+        }
+    }
+
+    @objc private func networkActivityTimerFired() {
+        guard statusIconNetworkActivity == networkAnimationActivity,
+              networkAnimationActivity != .idle else {
+            synchronizeNetworkActivityAnimation()
+            return
+        }
+
+        networkAnimationPhase = (networkAnimationPhase + 1) % 3
+        if let latestSnapshot {
+            updateStatusIcon(latestSnapshot)
+        }
+    }
+
+    private func updateStatusItemDescription(_ snapshot: StatusSnapshot) {
+        let description: String
+        switch wifiOperation {
+        case .scanning:
+            description = "\(snapshot.tooltip) • Refreshing Wi‑Fi"
+        case .connecting(let ssid):
+            description = "\(snapshot.tooltip) • Connecting to “\(ssid)”"
+        case .idle, .changingPower, .disconnecting:
+            description = snapshot.tooltip
+        }
+
+        statusItem.button?.toolTip = description
+        statusItem.button?.setAccessibilityValue(description)
     }
 
     private func applyStatusIcon(_ image: NSImage) {

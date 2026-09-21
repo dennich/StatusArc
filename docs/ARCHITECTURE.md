@@ -114,11 +114,14 @@ privacy impact easier to review.
 Draws the fixed-size menu-bar image using AppKit/Core Graphics:
 
 - battery arc;
+- semantic power-state dot;
 - compact input-source label derived from native metadata;
-- Wi-Fi dots or Ethernet line.
+- Wi-Fi dots, compact VPN marker, or Ethernet line;
+- transient Wi-Fi connecting/refreshing phases supplied by `AppDelegate`.
 
 The image is not marked as a template image because the battery arc needs
-semantic green/yellow/red colors.
+semantic red/yellow colors and the power dot needs semantic orange/green. The
+renderer resolves them against the status button's effective appearance.
 
 ## Refresh model
 
@@ -132,6 +135,11 @@ StatusArc refreshes from public system notifications:
 
 Appearance changes are observed through the status button's public effective
 appearance so semantic colors redraw immediately.
+
+The only high-frequency refresh is a 0.18-second menu-bar animation timer owned
+by `AppDelegate`. It exists solely while Wi-Fi is connecting or refreshing and
+is invalidated as soon as the operation ends. Passive state collection remains
+event-driven in `SystemStatusMonitor`.
 
 A 60-second fallback refresh recovers from any notification that a framework or
 OS release fails to deliver. Opening the menu also reads a fresh snapshot.

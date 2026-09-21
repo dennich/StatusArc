@@ -1,13 +1,50 @@
 import AppKit
 import CoreText
 
+enum StatusIconNetworkActivity: Equatable {
+    case idle
+    case connecting
+    case refreshing
+}
+
 final class StatusIconRenderer {
-    // Keep the native status item square without scaling the artwork.
+    // The Figma component and native status item share one fixed 22-point frame.
     static let baseItemWidth: CGFloat = 22
     private static let imageHeight: CGFloat = 22
 
-    func render(snapshot: StatusSnapshot) -> NSImage {
+    // Flattened directly from Figma's 14 × 4-point Union vector at 8×. It is
+    // used only as an alpha mask, so the semantic foreground color still
+    // follows the current menu-bar appearance without substituting a font.
+    private static let vpnMarkImage: NSImage? = {
+        let encoded = """
+        iVBORw0KGgoAAAANSUhEUgAAAHAAAAAgCAYAAADKbvy8AAAACXBIWXMAAFiVAABYlQHZbTfTAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAOdEVYdFNvZnR3YXJlAEZpZ21hnrGWYwAABGZJREFUeAHtm41V2zAQxy95DEAnQExQukGYoHQC3AmACTATQCdImAA6QdwJUiaQmSBhgqsOy8UxtvXXhwn09feeXoJzJ50+TjpJZkIWZt43H5lJn+2jX5PJZEEjYMqamY+vJkmZG5NuTVm/HTpN+46srqAG1DY2CWXjmXx/tJ+lq2zArhNrV23Tg0n3Jt+SIjH5S11P6aWeP00qtvI2Qmcmrfk12iRFiZC8TFpyN9cDevsmrXg81taujDww8ifc3W41c646OLS9Lnvy1Vx17LNQxsPoGCNaBs0dZeWBeinRDAxa7m/cNksKgN39IgNnXwSRkZ1TJFx5n4vKqNe6Y3pfH6eRdWlyHdBeGsg3J8ZYUySMe5Hq0F3zbjiJrEuTU8/2QphP6WWRH0LWoIwC4apTMlC8y54kU3gAc+6eThX5c8P1upWOR+nAH6Cw1whqcQnKLUx0tdWBnDCICkAGTpftisLyuktdnwlXa44mbJQfmwYuyANrsAbFD9uht6f+PblnFGXSjPz41BxYMndROLIFOHYJgWVc1cKuiKfGO6JiPFqb9+j7BAyKQIxs7pHveUs3FmdQA+aTNxU0qDQjEK4aH81XDeSBosgDI78A850H2jPEucM2hHza0LkiDHQ9E5onCEMsUpxaBLAA5RSl55Ljg5qDvx1oj81KQGmGFMx+kSc6eFJTgnKK0pMkqJm2/r4ljDNA5r17n6BAuZLGQZl0RxG0O/CGsH2hnAH2Rq0fxPsEdGv0VH/xGGz1obmLIw44qbGorQ60oTKyL5TOG1qEk3nfGN7J1eG4BCYZqFKQP9KWx4Q5xLkrqOlj0n7A+L5QDDvs2XjLdkORG2hfKeEWYRSgXPM6CmFrfwraI9dUh1wdx6HT5Jf6agsto/Op0b1Bw9gO3UtQF95T8m6Zd9ijAT3dkEf3nJptUIPK9zXYEZjB1u0BV1OTBnUzwjsQzXMMVGwHWh10zyk3L/ugrJ52NZh144Lc1LfkNTJdKECvHOu2PzEXCddgWeNKQE6md3Sv3b8MmN6doaOgoaNBnYw84N3cB+YD9iwBfd2hJ6c4Sa/Gpn1G2uCiIDdilHR2RuN5HxLJpaKkKrjKKTHWm79RQqaO332O11C33+W+b4jCpAuqIsHCIftIgdi8LygRe+QozHhWQe7rF9fvNaFrH+qBpYecJNmgy3p/394OjYkpq77cjbljfWYPkBGPmVEaQr3vCZQ73uGxnC8S1NSvSAbjmkJ91kIXHyXyfBOsx8t6WFI4pbMDLSnWrfe69u0MO1t8p3A2UAcm8ML/3tdDZFCzQT2QKC5yihllwgH9w0hQQ/jLZU0evKQZPyNtklMkjB1DoS8+RWPKugPsWZEn7H9gocgXxs/0hAUlgLFToZzeCNAe7+sh9nuHKKdQ2O2Jaw683xooc+hEP+j/D0a054YC4eoiQfPYbcvVaBFvXDUyXtmK+dy1hZYplVxyxBvjCeyRxr6zdV+nsoer24jM5qcbdX3Vtn8AwcjDXfLWFBsAAAAASUVORK5CYII=
+        """
+        guard let data = Data(base64Encoded: encoded) else { return nil }
+        return NSImage(data: data)
+    }()
+
+    func render(
+        snapshot: StatusSnapshot,
+        networkActivity: StatusIconNetworkActivity = .idle,
+        animationPhase: Int = 0,
+        reduceMotion: Bool = false,
+        appearance: NSAppearance? = nil
+    ) -> NSImage {
         let imageSize = NSSize(width: Self.baseItemWidth, height: Self.imageHeight)
+        let increaseContrast = NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast
+        let differentiateWithoutColor = NSWorkspace.shared
+            .accessibilityDisplayShouldDifferentiateWithoutColor
+        let dimAlpha: CGFloat = increaseContrast ? 0.48 : 0.28
+
+        // Resolve semantic colors for the status button's effective appearance.
+        // The resulting non-template image keeps state colors while still
+        // producing the correct white-on-dark and black-on-light variants.
+        let bright = resolved(.labelColor, appearance: appearance)
+        let red = resolved(.systemRed, appearance: appearance)
+        let yellow = resolved(.systemYellow, appearance: appearance)
+        let amber = resolved(.systemOrange, appearance: appearance)
+        let green = resolved(.systemGreen, appearance: appearance)
+
         let image = NSImage(size: imageSize, flipped: false) { [weak self] _ in
             guard
                 let self,
@@ -18,52 +55,60 @@ final class StatusIconRenderer {
 
             context.setAllowsAntialiasing(true)
             context.setShouldAntialias(true)
-
-            let bright = NSColor.labelColor
-            let increaseContrast = NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast
-            let dim = NSColor.tertiaryLabelColor.withAlphaComponent(
-                increaseContrast ? 0.78 : 0.55
-            )
-            let differentiateWithoutColor = NSWorkspace.shared
-                .accessibilityDisplayShouldDifferentiateWithoutColor
-            // Preserve the 30-point drawing coordinate space while centering
-            // its 10-point arc inside the final 22-point status-item frame.
-            let compositeRect = NSRect(
-                x: -4,
-                y: 0, width: 30, height: imageSize.height
-            )
+            let rect = NSRect(origin: .zero, size: imageSize)
 
             self.drawBatteryArc(
                 in: context,
-                rect: compositeRect,
+                rect: rect,
                 battery: snapshot.battery,
                 bright: bright,
-                dim: dim,
+                red: red,
+                yellow: yellow,
+                amber: amber,
+                green: green,
+                dimAlpha: dimAlpha,
                 differentiateWithoutColor: differentiateWithoutColor
             )
 
             self.drawInputSourceLabel(
                 snapshot.inputSourceLabel,
                 in: context,
-                rect: compositeRect,
+                rect: rect,
                 color: bright
             )
 
             self.drawNetworkIndicator(
                 snapshot.network,
                 vpn: snapshot.vpn,
+                activity: networkActivity,
+                animationPhase: animationPhase,
+                reduceMotion: reduceMotion,
                 in: context,
-                rect: compositeRect,
+                rect: rect,
                 bright: bright,
-                dim: dim
+                dim: bright.withAlphaComponent(dimAlpha)
             )
 
             return true
         }
 
-        // Keep this false so battery state colors are preserved.
+        // Template rendering would discard the battery and power-state colors.
         image.isTemplate = false
         return image
+    }
+
+    private func resolved(_ color: NSColor, appearance: NSAppearance?) -> NSColor {
+        var result = color
+        let resolve = {
+            result = color.usingColorSpace(.deviceRGB) ?? color
+        }
+
+        if let appearance {
+            appearance.performAsCurrentDrawingAppearance(resolve)
+        } else {
+            resolve()
+        }
+        return result
     }
 
     private func drawBatteryArc(
@@ -71,36 +116,39 @@ final class StatusIconRenderer {
         rect: NSRect,
         battery: BatteryStatus?,
         bright: NSColor,
-        dim: NSColor,
+        red: NSColor,
+        yellow: NSColor,
+        amber: NSColor,
+        green: NSColor,
+        dimAlpha: CGFloat,
         differentiateWithoutColor: Bool
     ) {
-        let center = CGPoint(x: rect.midX, y: 11)
-        let radius: CGFloat = 10
-        let lineWidth: CGFloat = 1.75
-        let startAngle = CGFloat.pi * (10.0 / 9.0)
-        let endAngle = -CGFloat.pi / 9.0
-        let leftGapAngle = CGFloat.pi * (29.0 / 36.0)
-        let rightGapAngle = CGFloat.pi * (7.0 / 36.0)
-        let hasTopIndicator = battery != nil
+        // Figma uses an inside-aligned 1.5-point stroke on the 20-point ellipse.
+        // A 9.25-point centerline radius reproduces its 10-point outer radius.
+        let center = CGPoint(x: rect.midX, y: rect.midY)
+        let radius: CGFloat = 9.25
+        let lineWidth: CGFloat = 1.5
+        let leftBottom = radians(210)
+        let leftTop = radians(120)
+        let rightTop = radians(60)
+        let rightBottom = radians(-30)
+        let segmentSweep = leftBottom - leftTop
 
         let activeColor: NSColor
-        let remainderColor: NSColor
         if battery?.isLowBattery == true {
-            activeColor = .systemRed
-            remainderColor = activeColor.withAlphaComponent(0.25)
+            activeColor = red
         } else if battery?.isLowPowerModeEnabled == true {
-            activeColor = .systemYellow
-            remainderColor = activeColor.withAlphaComponent(0.25)
+            activeColor = yellow
         } else {
             activeColor = bright
-            remainderColor = dim
         }
+        let remainderColor = activeColor.withAlphaComponent(dimAlpha)
 
         let accessibleLineWidth = differentiateWithoutColor && battery?.isLowBattery == true
             ? lineWidth + 0.65
             : lineWidth
 
-        func strokeArc(from arcStart: CGFloat, to arcEnd: CGFloat, color: NSColor) {
+        func strokeArc(from start: CGFloat, to end: CGFloat, color: NSColor) {
             context.saveGState()
             context.setStrokeColor(color.cgColor)
             context.setLineWidth(accessibleLineWidth)
@@ -112,213 +160,82 @@ final class StatusIconRenderer {
             context.addArc(
                 center: center,
                 radius: radius,
-                startAngle: arcStart,
-                endAngle: arcEnd,
+                startAngle: start,
+                endAngle: end,
                 clockwise: true
             )
             context.strokePath()
             context.restoreGState()
         }
 
-        // Every available battery state reserves a wide top gap for its power
-        // indicator. The wider opening keeps round arc caps clear of numbers.
-        if hasTopIndicator {
-            strokeArc(from: startAngle, to: leftGapAngle, color: remainderColor)
-            strokeArc(from: rightGapAngle, to: endAngle, color: remainderColor)
-        } else {
-            strokeArc(from: startAngle, to: endAngle, color: remainderColor)
-        }
+        strokeArc(from: leftBottom, to: leftTop, color: remainderColor)
+        strokeArc(from: rightTop, to: rightBottom, color: remainderColor)
 
-        guard let battery else { return }
+        if let battery {
+            let fraction = min(max(battery.level, 0), 1)
+            let activeSweep = segmentSweep * 2 * CGFloat(fraction)
+            let leftSweep = min(activeSweep, segmentSweep)
 
-        let fraction = min(max(battery.level, 0.0), 1.0)
-        if fraction > 0 {
-            if hasTopIndicator {
-                // The two 55-degree segments together represent 100%.
-                let segmentSweep = startAngle - leftGapAngle
-                let activeSweep = segmentSweep * 2 * CGFloat(fraction)
-                let leftSweep = min(activeSweep, segmentSweep)
-                strokeArc(from: startAngle, to: startAngle - leftSweep, color: activeColor)
-
-                let rightSweep = max(activeSweep - segmentSweep, 0)
-                if rightSweep > 0 {
-                    strokeArc(
-                        from: rightGapAngle,
-                        to: rightGapAngle - rightSweep,
-                        color: activeColor
-                    )
-                }
-            } else {
-                // The highlighted segment length is the exact battery percentage.
-                let sweep = CGFloat.pi * (11.0 / 9.0)
+            if leftSweep > 0 {
                 strokeArc(
-                    from: startAngle,
-                    to: startAngle - (sweep * CGFloat(fraction)),
+                    from: leftBottom,
+                    to: leftBottom - leftSweep,
+                    color: activeColor
+                )
+            }
+
+            let rightSweep = max(activeSweep - segmentSweep, 0)
+            if rightSweep > 0 {
+                strokeArc(
+                    from: rightTop,
+                    to: rightTop - rightSweep,
                     color: activeColor
                 )
             }
         }
 
-        drawTopPowerIndicator(battery, in: context, rect: rect, color: bright)
+        drawPowerStateDot(
+            battery,
+            in: context,
+            rect: rect,
+            bright: bright,
+            dim: bright.withAlphaComponent(dimAlpha),
+            amber: amber,
+            green: green
+        )
     }
 
-    private func drawTopPowerIndicator(
-        _ battery: BatteryStatus,
+    private func drawPowerStateDot(
+        _ battery: BatteryStatus?,
         in context: CGContext,
         rect: NSRect,
-        color: NSColor
+        bright: NSColor,
+        dim: NSColor,
+        amber: NSColor,
+        green: NSColor
     ) {
-        // A displayed 100% is easier to read as "on socket power" than as a
-        // cramped three-digit number. Give the plug visual priority even if
-        // macOS briefly continues reporting the battery as charging.
-        if battery.displayedPercentage >= 100 {
-            drawSocketPowerIndicator(in: context, rect: rect, color: color)
-            return
+        let color: NSColor
+        if let battery {
+            let externalPower = battery.isConnectedToExternalPower || battery.isCharging
+            if externalPower && (battery.isFullyCharged || battery.displayedPercentage >= 100) {
+                color = green
+            } else if externalPower {
+                // NSColor.systemOrange is macOS's public semantic amber.
+                color = amber
+            } else {
+                color = bright
+            }
+        } else {
+            color = dim
         }
 
-        switch battery.powerState {
-        case .onBattery:
-            let text = String(battery.displayedPercentage)
-            let line = roundedTextLine(
-                text,
-                size: 7,
-                weight: .regular,
-                color: color,
-                kern: 0
-            )
-            let glyphBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
-            let maximumWidth: CGFloat = 8.5
-            let horizontalScale = min(maximumWidth / glyphBounds.width, 1)
-
-            context.saveGState()
-            context.textMatrix = CGAffineTransform(scaleX: horizontalScale, y: 1)
-            context.textPosition = CGPoint(
-                x: rect.midX - glyphBounds.midX * horizontalScale,
-                y: 19 - glyphBounds.midY
-            )
-            CTLineDraw(line, context)
-            context.restoreGState()
-
-        case .charging:
-            drawChargingBolt(in: context, rect: rect, color: color)
-
-        case .fullyCharged, .connectedNotCharging:
-            drawSocketPowerIndicator(in: context, rect: rect, color: color)
-        }
-    }
-
-    private func drawChargingBolt(
-        in context: CGContext,
-        rect: NSRect,
-        color: NSColor
-    ) {
-        // This compact horizontal silhouette deliberately uses a custom path.
-        // Rotating bolt.fill produces a thin zig-zag that does not match the
-        // approved broad charging mark.
-        let center = CGPoint(x: rect.midX, y: 18.35)
-        let path = CGMutablePath()
-        path.move(to: CGPoint(x: center.x - 5.9, y: center.y + 0.9))
-        path.addLine(to: CGPoint(x: center.x - 1.6, y: center.y + 0.7))
-        path.addLine(to: CGPoint(x: center.x - 1.5, y: center.y + 3.15))
-        path.addCurve(
-            to: CGPoint(x: center.x, y: center.y + 3.5),
-            control1: CGPoint(x: center.x - 1.45, y: center.y + 3.45),
-            control2: CGPoint(x: center.x - 0.7, y: center.y + 3.65)
-        )
-        path.addLine(to: CGPoint(x: center.x + 5.9, y: center.y))
-        path.addCurve(
-            to: CGPoint(x: center.x + 5.25, y: center.y - 0.65),
-            control1: CGPoint(x: center.x + 6.1, y: center.y - 0.15),
-            control2: CGPoint(x: center.x + 5.75, y: center.y - 0.55)
-        )
-        path.addLine(to: CGPoint(x: center.x + 1.6, y: center.y - 0.4))
-        path.addLine(to: CGPoint(x: center.x + 1.3, y: center.y - 3.05))
-        path.addCurve(
-            to: CGPoint(x: center.x, y: center.y - 3.5),
-            control1: CGPoint(x: center.x + 1.25, y: center.y - 3.35),
-            control2: CGPoint(x: center.x + 0.55, y: center.y - 3.65)
-        )
-        path.addLine(to: CGPoint(x: center.x - 5.9, y: center.y))
-        path.addCurve(
-            to: CGPoint(x: center.x - 5.9, y: center.y + 0.9),
-            control1: CGPoint(x: center.x - 6.15, y: center.y - 0.2),
-            control2: CGPoint(x: center.x - 6.15, y: center.y + 0.7)
-        )
-        path.closeSubpath()
-
-        context.saveGState()
         context.setFillColor(color.cgColor)
-        context.addPath(path)
-        context.fillPath()
-        context.restoreGState()
-    }
-
-    private func drawSocketPowerIndicator(
-        in context: CGContext,
-        rect: NSRect,
-        color: NSColor
-    ) {
-        let symbolName = NSImage(
-            systemSymbolName: "powerplug.portrait.fill",
-            accessibilityDescription: nil
-        ) == nil ? "powerplug.fill" : "powerplug.portrait.fill"
-        drawTopSymbol(
-            symbolName,
-            pointSize: 13,
-            weight: .semibold,
-            maximumSize: NSSize(width: 11.5, height: 7.5),
-            rotation: -.pi / 2,
-            context: context,
-            in: rect,
-            color: color
-        )
-    }
-
-    private func drawTopSymbol(
-        _ name: String,
-        pointSize: CGFloat,
-        weight: NSFont.Weight,
-        maximumSize: NSSize,
-        rotation: CGFloat = 0,
-        context: CGContext,
-        in rect: NSRect,
-        color: NSColor
-    ) {
-        let configuration = NSImage.SymbolConfiguration(pointSize: pointSize, weight: weight)
-            .applying(.init(paletteColors: [color]))
-        guard let symbol = NSImage(
-            systemSymbolName: name,
-            accessibilityDescription: nil
-        )?.withSymbolConfiguration(configuration) else { return }
-
-        let cosine = abs(cos(rotation))
-        let sine = abs(sin(rotation))
-        let rotatedWidth = symbol.size.width * cosine + symbol.size.height * sine
-        let rotatedHeight = symbol.size.width * sine + symbol.size.height * cosine
-        let scale = min(
-            maximumSize.width / rotatedWidth,
-            maximumSize.height / rotatedHeight
-        )
-        let size = NSSize(
-            width: symbol.size.width * scale,
-            height: symbol.size.height * scale
-        )
-
-        context.saveGState()
-        context.translateBy(x: rect.midX, y: 18.25)
-        context.rotate(by: rotation)
-        symbol.draw(
-            in: NSRect(
-                x: -size.width / 2,
-                y: -size.height / 2,
-                width: size.width,
-                height: size.height
-            ),
-            from: .zero,
-            operation: .sourceOver,
-            fraction: 1
-        )
-        context.restoreGState()
+        context.fillEllipse(in: CGRect(
+            x: rect.midX - 2,
+            y: 18,
+            width: 4,
+            height: 4
+        ))
     }
 
     private func drawInputSourceLabel(
@@ -327,16 +244,9 @@ final class StatusIconRenderer {
         rect: NSRect,
         color: NSColor
     ) {
-        let line = roundedTextLine(
-            label,
-            size: 9.5,
-            weight: .bold,
-            color: color
-        )
+        let line = textLine(label, size: 8.5, weight: .bold, color: color)
         let glyphBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
 
-        // Center the visible glyph outlines rather than the font's line box.
-        // This keeps one- and two-letter identities on the same optical axis.
         context.saveGState()
         context.textMatrix = .identity
         context.textPosition = CGPoint(
@@ -350,13 +260,29 @@ final class StatusIconRenderer {
     private func drawNetworkIndicator(
         _ network: NetworkStatus,
         vpn: VPNStatus?,
+        activity: StatusIconNetworkActivity,
+        animationPhase: Int,
+        reduceMotion: Bool,
         in context: CGContext,
         rect: NSRect,
         bright: NSColor,
         dim: NSColor
     ) {
+        if activity != .idle {
+            drawWiFiActivityDots(
+                activity,
+                phase: animationPhase,
+                reduceMotion: reduceMotion,
+                in: context,
+                rect: rect,
+                bright: bright,
+                dim: dim
+            )
+            return
+        }
+
         if vpn != nil {
-            drawVPNLabel(in: context, rect: rect, color: bright)
+            drawVPNMark(in: context, rect: rect, color: bright)
             return
         }
 
@@ -371,11 +297,7 @@ final class StatusIconRenderer {
             )
 
         case .ethernet:
-            drawLANLine(
-                in: context,
-                rect: rect,
-                color: bright
-            )
+            drawLANLine(in: context, rect: rect, color: bright)
 
         case .other, .wifiDisconnected, .wifiOff, .disconnected:
             drawWiFiDots(
@@ -388,48 +310,41 @@ final class StatusIconRenderer {
         }
     }
 
-    private func drawVPNLabel(
+    private func drawVPNMark(
         in context: CGContext,
         rect: NSRect,
         color: NSColor
     ) {
-        let line = roundedTextLine(
-            "VPN",
-            size: 6,
-            weight: .regular,
-            color: color,
-            kern: 0.5
-        )
-        let glyphBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
+        guard let mark = Self.vpnMarkImage else { return }
+        let target = NSRect(x: rect.midX - 7, y: 1, width: 14, height: 4)
 
         context.saveGState()
-        context.textMatrix = .identity
-        context.textPosition = CGPoint(
-            x: rect.midX - glyphBounds.midX,
-            y: 3 - glyphBounds.midY
+        context.clip(to: target)
+        mark.draw(
+            in: target,
+            from: .zero,
+            operation: .sourceOver,
+            fraction: 1,
+            respectFlipped: false,
+            hints: [.interpolation: NSImageInterpolation.high]
         )
-        CTLineDraw(line, context)
+        context.setBlendMode(.sourceIn)
+        context.setFillColor(color.cgColor)
+        context.fill(target)
         context.restoreGState()
     }
 
-    private func roundedTextLine(
+    private func textLine(
         _ text: String,
         size: CGFloat,
         weight: NSFont.Weight,
-        color: NSColor,
-        kern: CGFloat? = nil
+        color: NSColor
     ) -> CTLine {
-        let baseFont = NSFont.systemFont(ofSize: size, weight: weight)
-        let descriptor = baseFont.fontDescriptor.withDesign(.rounded)
-            ?? baseFont.fontDescriptor
-        let font = NSFont(descriptor: descriptor, size: size) ?? baseFont
-        var attributes: [NSAttributedString.Key: Any] = [
+        let font = NSFont.systemFont(ofSize: size, weight: weight)
+        let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
             .foregroundColor: color
         ]
-        if let kern {
-            attributes[.kern] = kern
-        }
         return CTLineCreateWithAttributedString(
             NSAttributedString(string: text, attributes: attributes)
         )
@@ -443,25 +358,61 @@ final class StatusIconRenderer {
         dim: NSColor
     ) {
         let clamped = min(max(count, 0), 3)
-        let radius: CGFloat = 1.15
-        let spacing: CGFloat = 5.2
-        let totalWidth = spacing * 2
-        let startX = rect.midX - totalWidth / 2
-        let y: CGFloat = 2.25
+        for index in 0..<3 {
+            drawNetworkDot(
+                index: index,
+                in: context,
+                rect: rect,
+                color: index < clamped ? bright : dim
+            )
+        }
+    }
+
+    private func drawWiFiActivityDots(
+        _ activity: StatusIconNetworkActivity,
+        phase: Int,
+        reduceMotion: Bool,
+        in context: CGContext,
+        rect: NSRect,
+        bright: NSColor,
+        dim: NSColor
+    ) {
+        if reduceMotion {
+            let steady = bright.withAlphaComponent(0.58)
+            for index in 0..<3 {
+                drawNetworkDot(index: index, in: context, rect: rect, color: steady)
+            }
+            return
+        }
+
+        let normalizedPhase = ((phase % 3) + 3) % 3
+        let activeIndex: Int
+        switch activity {
+        case .connecting:
+            activeIndex = normalizedPhase
+        case .refreshing:
+            activeIndex = 2 - normalizedPhase
+        case .idle:
+            return
+        }
 
         for index in 0..<3 {
-            let x = startX + CGFloat(index) * spacing
-            let dotRect = CGRect(
-                x: x - radius,
-                y: y - radius,
-                width: radius * 2,
-                height: radius * 2
-            )
-
-            let color = index < clamped ? bright : dim
-            context.setFillColor(color.cgColor)
-            context.fillEllipse(in: dotRect)
+            let color = index == activeIndex ? bright : dim
+            drawNetworkDot(index: index, in: context, rect: rect, color: color)
         }
+    }
+
+    private func drawNetworkDot(
+        index: Int,
+        in context: CGContext,
+        rect: NSRect,
+        color: NSColor
+    ) {
+        // Figma positions the 3-point dots 4.5 points center-to-center. Their
+        // top-down centers are x = 6.5/11/15.5 and y = 19.5.
+        let x = rect.midX - 4.5 + CGFloat(index) * 4.5
+        context.setFillColor(color.cgColor)
+        context.fillEllipse(in: CGRect(x: x - 1.5, y: 1, width: 3, height: 3))
     }
 
     private func drawLANLine(
@@ -469,16 +420,21 @@ final class StatusIconRenderer {
         rect: NSRect,
         color: NSColor
     ) {
-        let y: CGFloat = 2.25
-        let halfWidth: CGFloat = 6.35
+        let lineWidth: CGFloat = 2
+        let centerlineWidth: CGFloat = 9
+        let halfCenterlineWidth = centerlineWidth / 2
 
         context.saveGState()
         context.setStrokeColor(color.cgColor)
-        context.setLineWidth(2.3)
+        context.setLineWidth(lineWidth)
         context.setLineCap(.round)
-        context.move(to: CGPoint(x: rect.midX - halfWidth, y: y))
-        context.addLine(to: CGPoint(x: rect.midX + halfWidth, y: y))
+        context.move(to: CGPoint(x: rect.midX - halfCenterlineWidth, y: 2.5))
+        context.addLine(to: CGPoint(x: rect.midX + halfCenterlineWidth, y: 2.5))
         context.strokePath()
         context.restoreGState()
+    }
+
+    private func radians(_ degrees: CGFloat) -> CGFloat {
+        degrees * .pi / 180
     }
 }

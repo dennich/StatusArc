@@ -36,30 +36,26 @@ control behavior, keyboard navigation, accessibility, and enabled states.
 
 | Percentage | Low Power Mode | macOS warning | Power state | Expected arc / top indicator |
 | --- | --- | --- | --- | --- |
-| 80% | off | none | battery | split normal / `80` |
-| 26% | off | none | battery | split normal / `26` |
-| 25% | off | none | battery | split normal / `25` |
-| 10% | off | none | battery | split normal / `10` |
-| 80% | on | none | battery | split yellow / `80` |
-| 20% | on | none | battery | split yellow / `20` |
-| 30% | off | early | battery | split red / `30` |
-| 30% | off | final | battery | split red / `30` |
-| 80% | off | none | charging | split normal / bolt |
-| 20% | off | none | charging | split normal / bolt |
-| 80% | on | none | charging | split yellow / bolt |
-| 20% | on | none | charging | split yellow / bolt |
-| 30% | off and on | early and final | charging | split red / bolt |
-| 80% | off | none | socket, not charging | split normal / plug |
-| 100% | off | none | fully charged | split normal / plug |
+| 80% | off | none | battery | split normal / foreground dot |
+| 25% | off | none | battery | split normal / foreground dot |
+| 10% | off | none | battery | split normal / foreground dot |
+| 80% | on | none | battery | split yellow / foreground dot |
+| 20% | on | none | battery | split yellow / foreground dot |
+| 30% | off | early | battery | split red / foreground dot |
+| 30% | off | final | battery | split red / foreground dot |
+| 80% | off | none | charging | split normal / amber dot |
+| 20% | on | none | charging | split yellow / amber dot |
+| 30% | on | early or final | charging | split red / amber dot |
+| 80% | off | none | socket, not charging | split normal / amber dot |
+| 100% | off | none | fully charged and plugged | split normal / green dot |
 
-Confirm battery percentages use 7-point rounded regular type, zero letter spacing,
-and fit at 100% without touching either arc cap. At 100%, confirm battery power
-shows `100` while connected external power shows the plug.
-External power with charging paused, charging complete, or the battery otherwise
-not charging must show a compact plug and an accurate panel label rather than
-claiming active charging.
+Confirm the top dot is 4 × 4 points and remains centered in the Figma-sized top
+opening. External power below 100% must stay amber even when charging is paused;
+only a charged battery on external power turns it green. The expanded panel must
+continue to describe charging, paused, and fully charged states accurately.
 
-- Check that percentage alone never triggers a warning: 25.49% displays 25%, 25.50% displays 26%, and neither is urgent without a system warning. Also check 0% and 10% with no warning.
+- Check that percentage alone never triggers a warning: 25.49% and 25.50% both
+  remain normal without a system warning. Also check 0% and 10% with no warning.
 - Confirm early/final macOS warnings show a red arc without a dot, including with Low Power Mode enabled.
 - Confirm the unused arc is dim neutral, dim red, or dim yellow to match its state.
 - Confirm language and network colors remain independent of battery colors.
@@ -68,10 +64,10 @@ claiming active charging.
 - Switch repeatedly among battery, charging, and external-power states. The
   image and native item must remain 22 × 22 points, and neighboring menu-bar
   items must not move.
-- Confirm the top number or bolt remains centered inside the split-arc gap and
-  does not collide with the arc at 0%, 100%, or increased-contrast widths.
-- Confirm charging below 100% uses the broad horizontal bolt, while 100% and
-  socket power use the horizontal plug; both must remain clear of the arc caps.
+- Compare the 20 × 20-point ellipse, two 90-degree side arcs, 1.5-point stroke,
+  round caps, and both openings against the approved Figma export at 1× and 2×.
+- Confirm the 4-point power dot remains clear of the arc caps at 0%, 100%, and
+  increased-contrast widths.
 - Confirm the button never automatically scales or squeezes the artwork.
 - Check transitions with the menu open and after wake; confirm the final icon matches the reported charging/warning state.
 - Confirm this change adds no system-state polling or permission requests.
@@ -79,6 +75,9 @@ claiming active charging.
 ## Wi-Fi
 
 - With Wi-Fi connected, confirm 1–3 dots are shown.
+- Confirm every dot is 3 × 3 points, adjacent dots are 4.5 points
+  center-to-center, their vertical center is 19.5 points from the top, and the
+  strong/medium/weak/disconnected matrix matches Figma.
 - Move between stronger/weaker signal conditions if practical.
 - Turn Wi-Fi off from StatusArc and confirm the indicator becomes disconnected.
 - Turn Wi-Fi back on.
@@ -94,6 +93,11 @@ claiming active charging.
 - Confirm scans group the current, known, and other networks without truncating results.
 - While scanning, connecting, disconnecting, and toggling power, confirm duplicate
   actions are disabled and the panel reports the transient state.
+- While scanning/refreshing, confirm the bright dot travels right to left. While
+  connecting, confirm it travels left to right. The dots must not move or resize,
+  and animation must stop immediately when the operation ends.
+- Enable Reduce Motion and confirm scanning/connecting uses three static
+  mid-tint dots while the tooltip and accessibility value report the operation.
 - Check Wi-Fi off, Wi-Fi on but disconnected, and a local connection without an
   Internet path; confirm the panel and accessibility value distinguish them.
 - Option-open StatusArc and inspect Connection Details. Confirm IP address,
@@ -113,15 +117,15 @@ claiming active charging.
 - Repeat with a Network Extension packet tunnel whose primary route is `utun`,
   `ppp`, or `ipsec` but has no legacy VPN service record. Confirm the generic
   `VPN` state appears without exposing the interface name as VPN details.
-- Confirm `VPN` uses slightly lowered 6-point rounded regular type with clearly visible letter spacing
-  and stays optically centered in the bottom gap.
+- Confirm `VPN` is drawn from the exact flattened Figma Union shape—not a
+  font—and its 14 × 4-point bounds stay at x = 4, y = 17 in the bottom opening.
 
 ## Input sources
 
 - Configure at least two input sources in macOS.
 - Switch them using StatusArc.
 - Confirm the center label updates to match the current macOS input source.
-- Confirm one- and two-letter labels both use 9.5-point rounded bold type, have matching
+- Confirm one- and two-letter labels both use 8.5-point bold system type, have matching
   optical vertical alignment, and remain readable at normal menu-bar size.
 - Confirm ASCII sources use a compact system-name label and non-ASCII sources
   use the native language name rather than a fixed country-code mapping.
