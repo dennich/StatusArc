@@ -4,6 +4,8 @@ All notable user-visible changes to StatusArc are documented here.
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-09-21
+
 ### Changed
 - The composite icon now matches the approved Figma matrix: a top-aligned 4-point power-state dot, 1.5-point battery arcs with state-tinted remainders, an 8.5-point input label, precisely positioned 3-point Wi-Fi dots, an 11 × 2-point visible Ethernet line, and the exact 14 × 4-point VPN shape.
 - External power below 100% uses macOS semantic amber, while a charged battery on external power uses semantic green. Warning and Low Power Mode tracks use macOS semantic red and yellow.
