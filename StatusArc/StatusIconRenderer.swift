@@ -132,7 +132,18 @@ final class StatusIconRenderer {
         let leftTop = radians(120)
         let rightTop = radians(60)
         let rightBottom = radians(-30)
-        let segmentSweep = leftBottom - leftTop
+        let externalPower = battery.map {
+            $0.isConnectedToExternalPower || $0.isCharging
+        } ?? false
+
+        // Figma joins the two upper arc sections while the Mac is draining.
+        // External-power states retain the top opening for their power dot.
+        let arcSegments: [(start: CGFloat, end: CGFloat)] = externalPower
+            ? [(leftBottom, leftTop), (rightTop, rightBottom)]
+            : [(leftBottom, rightBottom)]
+        let totalSweep = arcSegments.reduce(CGFloat.zero) {
+            $0 + ($1.start - $1.end)
+        }
 
         let activeColor: NSColor
         if battery?.isLowBattery == true {
@@ -168,29 +179,23 @@ final class StatusIconRenderer {
             context.restoreGState()
         }
 
-        strokeArc(from: leftBottom, to: leftTop, color: remainderColor)
-        strokeArc(from: rightTop, to: rightBottom, color: remainderColor)
+        for segment in arcSegments {
+            strokeArc(from: segment.start, to: segment.end, color: remainderColor)
+        }
 
         if let battery {
             let fraction = min(max(battery.level, 0), 1)
-            let activeSweep = segmentSweep * 2 * CGFloat(fraction)
-            let leftSweep = min(activeSweep, segmentSweep)
+            var remainingActiveSweep = totalSweep * CGFloat(fraction)
 
-            if leftSweep > 0 {
+            for segment in arcSegments where remainingActiveSweep > 0 {
+                let segmentSweep = segment.start - segment.end
+                let sweep = min(remainingActiveSweep, segmentSweep)
                 strokeArc(
-                    from: leftBottom,
-                    to: leftBottom - leftSweep,
+                    from: segment.start,
+                    to: segment.start - sweep,
                     color: activeColor
                 )
-            }
-
-            let rightSweep = max(activeSweep - segmentSweep, 0)
-            if rightSweep > 0 {
-                strokeArc(
-                    from: rightTop,
-                    to: rightTop - rightSweep,
-                    color: activeColor
-                )
+                remainingActiveSweep -= sweep
             }
         }
 
@@ -198,8 +203,6 @@ final class StatusIconRenderer {
             battery,
             in: context,
             rect: rect,
-            bright: bright,
-            dim: bright.withAlphaComponent(dimAlpha),
             amber: amber,
             green: green
         )
@@ -209,25 +212,16 @@ final class StatusIconRenderer {
         _ battery: BatteryStatus?,
         in context: CGContext,
         rect: NSRect,
-        bright: NSColor,
-        dim: NSColor,
         amber: NSColor,
         green: NSColor
     ) {
-        let color: NSColor
-        if let battery {
-            let externalPower = battery.isConnectedToExternalPower || battery.isCharging
-            if externalPower && (battery.isFullyCharged || battery.displayedPercentage >= 100) {
-                color = green
-            } else if externalPower {
-                // NSColor.systemOrange is macOS's public semantic amber.
-                color = amber
-            } else {
-                color = bright
-            }
-        } else {
-            color = dim
-        }
+        guard let battery else { return }
+        let externalPower = battery.isConnectedToExternalPower || battery.isCharging
+        guard externalPower else { return }
+
+        let color = battery.isFullyCharged || battery.displayedPercentage >= 100
+            ? green
+            : amber
 
         context.setFillColor(color.cgColor)
         context.fillEllipse(in: CGRect(

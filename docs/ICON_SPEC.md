@@ -3,13 +3,15 @@
 The menu-bar icon is one fixed 22 × 22-point component with three information
 zones. Its geometry follows the approved Figma state matrix.
 
-## 1. Battery — split arc and power dot
+## 1. Battery — adaptive arc and power dot
 
 The battery track follows a 20 × 20-point ellipse centered in the component.
-Two 90-degree, 1.5-point rounded arc segments run from 120° to 210° on the left
-and from 60° to −30° on the right. The stroke is inset so its outer radius is 10
-points. The combined active length across the left segment and then the right
-segment equals the exact battery percentage; the remainder uses the same state
+While draining, one continuous 240-degree, 1.5-point rounded arc runs from 210°
+through the top to −30°, leaving only the bottom network opening. While external
+power is connected, the track separates into two 90-degree side arcs from 210°
+to 120° and from 60° to −30°, leaving room for the top power dot. The stroke is
+inset so its outer radius is 10 points. The active length across the applicable
+track equals the exact battery percentage; the remainder uses the same state
 color at reduced opacity.
 
 - Low battery: `NSColor.systemRed` active track and tinted red remainder.
@@ -23,9 +25,10 @@ Low battery means an early/final warning from
 `IOPSGetBatteryWarningLevel()`. No custom percentage threshold is applied.
 
 A centered 4 × 4-point dot occupies x = 9, y = 0 in Figma's top-down
-coordinate space:
+coordinate space only while external power is connected:
 
-- battery power: normal semantic foreground;
+- battery power, including warning states: no top dot and one connected upper
+  arc;
 - external power below 100%, whether charging or paused: `NSColor.systemOrange`
   (the public macOS semantic amber used to match Apple's charge-cord behavior);
 - charged while connected to external power: `NSColor.systemGreen`.
@@ -95,3 +98,12 @@ assets. The image remains non-template so state colors survive.
 The status button uses no image scaling. Battery, input-source, network, VPN,
 and transient activity states all remain inside the same 22 × 22-point frame,
 so neighboring menu-bar items never move.
+
+## Application icon
+
+The macOS application icon is supplied through `Assets.xcassets/AppIcon` at
+every required 16–1024 px rendition. It uses a centered rounded tile with a
+transparent square canvas, a simple split-arc glyph, a semantic green power
+dot, and three network dots. Small renditions reduce decorative effects and
+increase stroke weight for legibility. The generator keeps the source geometry
+reproducible in `scripts/generate-app-icon.swift`.

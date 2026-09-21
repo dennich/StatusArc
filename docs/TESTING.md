@@ -27,7 +27,9 @@ control behavior, keyboard navigation, accessibility, and enabled states.
 ## Battery
 
 - Confirm the arc roughly matches the current percentage.
-- Confirm the split track leaves a clear top gap around every indicator.
+- Confirm draining states use one connected upper arc with no top opening.
+- Confirm external-power states use a split track with a clear top gap around
+  the power dot.
 - Confirm the unused arc is dimmed.
 - Confirm the Battery island reports percentage and charging/fully charged
   state without a disclosure chevron.
@@ -36,23 +38,25 @@ control behavior, keyboard navigation, accessibility, and enabled states.
 
 | Percentage | Low Power Mode | macOS warning | Power state | Expected arc / top indicator |
 | --- | --- | --- | --- | --- |
-| 80% | off | none | battery | split normal / foreground dot |
-| 25% | off | none | battery | split normal / foreground dot |
-| 10% | off | none | battery | split normal / foreground dot |
-| 80% | on | none | battery | split yellow / foreground dot |
-| 20% | on | none | battery | split yellow / foreground dot |
-| 30% | off | early | battery | split red / foreground dot |
-| 30% | off | final | battery | split red / foreground dot |
+| 80% | off | none | battery | connected normal / no dot |
+| 25% | off | none | battery | connected normal / no dot |
+| 10% | off | none | battery | connected normal / no dot |
+| 80% | on | none | battery | connected yellow / no dot |
+| 20% | on | none | battery | connected yellow / no dot |
+| 30% | off | early | battery | connected red / no dot |
+| 30% | off | final | battery | connected red / no dot |
 | 80% | off | none | charging | split normal / amber dot |
 | 20% | on | none | charging | split yellow / amber dot |
 | 30% | on | early or final | charging | split red / amber dot |
 | 80% | off | none | socket, not charging | split normal / amber dot |
 | 100% | off | none | fully charged and plugged | split normal / green dot |
 
-Confirm the top dot is 4 × 4 points and remains centered in the Figma-sized top
-opening. External power below 100% must stay amber even when charging is paused;
-only a charged battery on external power turns it green. The expanded panel must
-continue to describe charging, paused, and fully charged states accurately.
+Confirm draining states close the top opening by joining the upper arc and never
+show a top dot. When present, the top dot is 4 × 4 points and remains centered
+in the Figma-sized opening. External power below 100% must stay amber even when
+charging is paused; only a charged battery on external power turns it green. The
+expanded panel must continue to describe charging, paused, and fully charged
+states accurately.
 
 - Check that percentage alone never triggers a warning: 25.49% and 25.50% both
   remain normal without a system warning. Also check 0% and 10% with no warning.
@@ -64,13 +68,24 @@ continue to describe charging, paused, and fully charged states accurately.
 - Switch repeatedly among battery, charging, and external-power states. The
   image and native item must remain 22 × 22 points, and neighboring menu-bar
   items must not move.
-- Compare the 20 × 20-point ellipse, two 90-degree side arcs, 1.5-point stroke,
-  round caps, and both openings against the approved Figma export at 1× and 2×.
+- Compare the 20 × 20-point ellipse, draining 240-degree connected arc, external
+  power's two 90-degree side arcs, 1.5-point stroke, and round caps against the
+  approved Figma exports at 1× and 2×.
 - Confirm the 4-point power dot remains clear of the arc caps at 0%, 100%, and
   increased-contrast widths.
 - Confirm the button never automatically scales or squeezes the artwork.
 - Check transitions with the menu open and after wake; confirm the final icon matches the reported charging/warning state.
 - Confirm this change adds no system-state polling or permission requests.
+
+## Application icon
+
+- Confirm the app bundle includes `AppIcon.icns` and Finder, About, Spotlight,
+  and the application switcher display the StatusArc icon instead of a generic
+  executable icon.
+- Inspect 16, 32, 128, 256, 512, and 1024 px renditions. At small sizes, the
+  split arcs, green power dot, and three network dots must remain distinct.
+- Confirm the PNG renditions use an sRGB color profile, a transparent square
+  canvas, centered content, and no pre-baked full-canvas corner mask.
 
 ## Wi-Fi
 

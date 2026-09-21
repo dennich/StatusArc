@@ -4,6 +4,12 @@ All notable user-visible changes to StatusArc are documented here.
 
 ## [Unreleased]
 
+### Added
+- StatusArc now ships with a complete native macOS app-icon asset set, including individually rendered 16–1024 px variants based on the composite status motif.
+
+### Changed
+- Draining and draining-with-warning states now use one connected upper arc with no top dot, matching the revised Figma state matrix. The split arc and dot are reserved for external-power states.
+
 ## [1.4.0] - 2026-09-21
 
 ### Changed
